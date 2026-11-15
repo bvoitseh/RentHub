@@ -84,3 +84,9 @@ app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
   time-zone: Europe/Kyiv
   mail-from: ${MAIL_FROM:noreply@renthub.local}
+  # NFR-14: "limit" attempts per "window"; reaching the limit locks the key for another window.
+  rate-limit:
+    login: { limit: ${RATE_LIMIT_LOGIN:5}, window: 15m }
+    registration: { limit: ${RATE_LIMIT_REGISTRATION:5}, window: 1h }
+    password-reset: { limit: ${RATE_LIMIT_PASSWORD_RESET:3}, window: 1h }
+    resend-verification: { limit: ${RATE_LIMIT_RESEND_VERIFICATION:3}, window: 1h }
