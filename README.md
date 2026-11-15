@@ -44,7 +44,8 @@ Useful dev URLs:
 | http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
 
 The dev profile needs no environment variables. Copy `.env.example` to `.env` to override anything
-(admin bootstrap, SMTP, S3, …); the file lists every variable the application reads.
+(admin bootstrap, SMTP, S3, …); the file lists every variable the application reads. `./gradlew bootRun` exports the
+root `.env` to the application automatically (variables already set in the shell take precedence).
 
 Demo accounts (dev profile only, created at start-up if missing; password `Password123` for all):
 

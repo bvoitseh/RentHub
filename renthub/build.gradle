@@ -44,6 +44,31 @@ tasks.named('test') {
 }
 
 // `./gradlew bootRun` starts the dev profile (H2 + seed data) unless -Pprofile=... is given.
+// Variables from the repository-root `.env` (git-ignored, see `.env.example`) are exported to the process;
+// variables already present in the shell environment win.
 tasks.named('bootRun') {
 	args = ["--spring.profiles.active=${findProperty('profile') ?: 'dev'}"]
+	environment(dotEnv(rootDir.parentFile.toPath().resolve('.env').toFile()))
+}
+
+static Map<String, String> dotEnv(File file) {
+	if (!file.isFile()) {
+		return [:]
+	}
+	def vars = [:]
+	file.readLines('UTF-8').each { line ->
+		def trimmed = line.trim()
+		if (trimmed.isEmpty() || trimmed.startsWith('#') || !trimmed.contains('=')) {
+			return
+		}
+		def (key, rest) = trimmed.split('=', 2)
+		def value = rest.replaceFirst(/\s+#.*$/, '').trim()
+		if (value.length() >= 2 && (value.startsWith('"') && value.endsWith('"') || value.startsWith("'") && value.endsWith("'"))) {
+			value = value[1..-2]
+		}
+		if (System.getenv(key.trim()) == null) {
+			vars[key.trim()] = value
+		}
+	}
+	return vars
 }
