@@ -10,15 +10,15 @@ renthub/
 ├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml   postgres · minio (+ bucket init) · mailpit
+├─ docker-compose.yml   minio (+ bucket init) · mailpit
 └─ .env.example         every environment variable the app reads
 ```
 
 ## 2. Backend
 
 **Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, springdoc-openapi (dev only), Lombok. H2 (PostgreSQL mode) in `dev`,
-PostgreSQL in `prod`. No backend tests by project policy.
+Scheduling + `@Async`, Actuator, Flyway, springdoc-openapi, Lombok. Embedded H2 in PostgreSQL mode, one configuration
+without Spring profiles (D-17). No backend tests by project policy.
 
 **Package-by-feature** under `com.bohakka.renthub`; each feature package uses `web/` (controllers + DTO records
 + mappers), `service/` (use cases, transactions, ownership checks), `repository/` (Spring Data), `domain/` (entities
@@ -31,7 +31,7 @@ and business rules).
 | `common.ratelimit` | `RateLimiter` (in-memory sliding window + lock, `Clock`-driven), `RateLimitProperties` (`app.rate-limit.*`), `RateLimitedException` 429 (NFR-14) |
 | `mail` | `MailGateway` interface + `SmtpMailGateway` (`JavaMailSender`), `EmailMessage` record |
 | `user` | accounts (FR-1…FR-3c): `domain` (`User`, `EmailToken`, `Role`, `OwnerType`), `security` (`AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`), `service` (`RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap`, `AccountMailListener`), `event` (mail-trigger records), `web` (`AuthController`, `MeController`, request/response records) |
-| `dev` | `DemoUsersSeeder` — demo accounts per role, `dev` profile only |
+| `dev` | `DemoUsersSeeder` — demo accounts per role, created at start-up when missing |
 | `admin` | `Settings` singleton entity (commission `feeRate`) + repository (done); categories, moderation, statistics (later) |
 | `catalog`, `booking`, `review`, `complaint`, `recommendation` | planned, see CLAUDE.md §2.5 |
 
@@ -47,12 +47,12 @@ Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{fiel
 carry status + code + message key (`messages_uk.properties`) + optional extra properties (e.g. conflicting days).
 Security failures are routed through `HandlerExceptionResolver` so the same advice renders them.
 
-**Security model (NFR-4):** server-side HTTP session, cookie `RENTHUB_SESSION` (HttpOnly, SameSite=Lax, Secure in
-prod, 7-day timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA pattern from the Spring
+**Security model (NFR-4):** server-side HTTP session, cookie `RENTHUB_SESSION` (HttpOnly, SameSite=Lax, 7-day
+timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA pattern from the Spring
 Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks
 in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
 (`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`,
-dev tools in `dev`). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
+H2 console and Swagger UI). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
 (`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
 (so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
@@ -66,12 +66,12 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
 (after commit, off the request thread, failures logged). `AdminBootstrap` (FR-2a) runs at start-up.
 
-**Configuration & profiles:** `application.yml` (shared; secrets only via `${ENV}`), `application-dev.yml`
-(file H2 `./data/renthub`, H2 console `/h2-console`, Swagger `/swagger-ui.html`, Mailpit), `application-prod.yml`
-(PostgreSQL, secure cookie, forwarded headers for Nginx). Default profile is `dev`.
+**Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
+`/h2-console`, Swagger `/swagger-ui.html`, Mailpit by default; secrets and external services only via `${ENV}`
+variables (`.env.example`), which `./gradlew bootRun` exports from the root `.env`.
 
-**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written to run unchanged on H2
-(PostgreSQL mode) and PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
+**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
+runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validates (`ddl-auto=validate`). Timestamps are
 `TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.
@@ -79,7 +79,7 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 **Scheduled jobs:** `RateLimiter.evictIdleBuckets` (every 10 min). Booking completion/expiry and review publishing
 come with their features.
 
-**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; Mailpit in dev, any provider via `SMTP_*`).
+**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; Mailpit by default, any relay via `SMTP_*`).
 Object storage and geocoding will follow the same pattern: one small application-owned interface per capability.
 
 ## 3. Frontend
@@ -110,8 +110,8 @@ is not an error); login/register/restore set it, logout and deactivation clear t
 routes (redirects guests to `/login` and back). Forms: react-hook-form + Zod schemas with Ukrainian messages, backend
 violations applied with `applyServerErrors`.
 
-Dev: Vite on :5173 proxies `/api` and `/actuator` to Spring Boot on :8080 (same origin, so session + CSRF cookies
-work without CORS). Prod: Nginx serves `dist/` and proxies `/api`.
+Vite on :5173 proxies `/api` and `/actuator` to Spring Boot on :8080 (same origin, so session + CSRF cookies
+work without CORS).
 
 ## 4. Patterns in use (one line each)
 

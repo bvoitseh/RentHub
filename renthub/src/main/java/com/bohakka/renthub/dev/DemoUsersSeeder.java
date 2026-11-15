@@ -9,16 +9,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Demo accounts for every role, dev profile only (CLAUDE.md 2.4). Password for all: {@value #PASSWORD}. */
+/** Demo accounts for every role, created at start-up when missing (CLAUDE.md 2.4). Password for all: {@value #PASSWORD}. */
 @Slf4j
 @Component
-@Profile("dev")
 @Order(2)
 @RequiredArgsConstructor
 public class DemoUsersSeeder implements ApplicationRunner {

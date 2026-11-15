@@ -1,24 +1,7 @@
-# Local infrastructure for development: PostgreSQL (optional, the dev profile uses H2 by default),
-# MinIO as S3-compatible object storage and Mailpit as an SMTP catcher with a web UI.
-# Usage: docker compose up -d postgres minio mailpit
+# Local infrastructure: MinIO as S3-compatible object storage and Mailpit as an SMTP catcher with a web UI.
+# The database is embedded H2 (see application.yml), so no database container is needed.
+# Usage: docker compose up -d minio mailpit
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: renthub-postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-renthub}
-      POSTGRES_USER: ${POSTGRES_USER:-renthub}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-renthub}
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-renthub} -d ${POSTGRES_DB:-renthub}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   minio:
     image: minio/minio:RELEASE.2025-09-07T16-13-09Z
     container_name: renthub-minio
@@ -66,5 +49,4 @@ services:
       MP_SMTP_AUTH_ALLOW_INSECURE: 1
 
 volumes:
-  postgres-data:
   minio-data:

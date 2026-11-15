@@ -26,12 +26,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
-	implementation 'org.flywaydb:flyway-database-postgresql'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0'
 
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'org.springframework.boot:spring-boot-h2console'
-	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -43,11 +41,9 @@ tasks.named('test') {
 	enabled = false
 }
 
-// `./gradlew bootRun` starts the dev profile (H2 + seed data) unless -Pprofile=... is given.
-// Variables from the repository-root `.env` (git-ignored, see `.env.example`) are exported to the process;
-// variables already present in the shell environment win.
+// `./gradlew bootRun` exports the variables from the repository-root `.env` (git-ignored, see `.env.example`)
+// to the process; variables already present in the shell environment win.
 tasks.named('bootRun') {
-	args = ["--spring.profiles.active=${findProperty('profile') ?: 'dev'}"]
 	environment(dotEnv(rootDir.parentFile.toPath().resolve('.env').toFile()))
 }
 

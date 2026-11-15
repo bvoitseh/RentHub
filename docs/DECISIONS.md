@@ -102,3 +102,13 @@ sessions, which is acceptable for this deployment.
 nullable in the schema and required by registration validation instead. In the `dev` profile `DemoUsersSeeder`
 creates `admin@`, `owner@`, `company@` and `renter@renthub.local` (password `Password123`) regardless of the
 `ADMIN_*` variables; `AdminBootstrap` still runs first and applies when the variables are set.
+
+## D-17 One configuration, no Spring profiles, embedded H2 only (2026-11-15)
+
+**Concerns:** CLAUDE.md §3 (PostgreSQL in production, H2 in `dev`), NFR-2/NFR-4/NFR-5 (production deployment),
+backlog item 10. **Decision:** author's request — the project is educational and runs in one environment. The `dev`
+and `prod` profiles were removed: a single `application.yml` configures the file-based H2 database (PostgreSQL mode),
+the H2 console, Swagger UI and Mailpit as the default SMTP server; the PostgreSQL driver, the Flyway PostgreSQL module
+and the `postgres` compose service are gone. Demo accounts are always seeded when missing. Migrations stay in portable
+SQL, so PostgreSQL could be reintroduced later with a driver and a datasource URL. External services (SMTP, S3,
+geocoding) remain configurable through environment variables; `./gradlew bootRun` exports the root `.env`.

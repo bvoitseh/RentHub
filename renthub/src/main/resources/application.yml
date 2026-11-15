@@ -1,10 +1,20 @@
+# Single configuration (no Spring profiles, see DECISIONS.md D-17): embedded H2 in PostgreSQL mode (file-based so data
+# survives restarts), H2 console, Swagger UI, Mailpit (docker compose) or any SMTP relay via SMTP_* variables.
 spring:
   application:
     name: renthub
-  profiles:
-    default: dev
+  datasource:
+    url: jdbc:h2:file:./data/renthub;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
   jpa:
     open-in-view: false
+    show-sql: false
     hibernate:
       ddl-auto: validate
     properties:
@@ -76,9 +86,15 @@ management:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
+    path: /api-docs
   swagger-ui:
-    enabled: false
+    enabled: true
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.bohakka.renthub: DEBUG
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}

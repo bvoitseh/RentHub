@@ -6,7 +6,7 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
 
-/** SMTP implementation (Mailpit in dev, any transactional provider in prod via SMTP_* variables). */
+/** SMTP implementation (Mailpit by default, any SMTP relay via the SMTP_* variables). */
 @Component
 @RequiredArgsConstructor
 public class SmtpMailGateway implements MailGateway {
