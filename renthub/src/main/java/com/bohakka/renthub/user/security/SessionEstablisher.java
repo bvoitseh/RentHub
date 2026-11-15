@@ -5,6 +5,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextHolderStrategy;
 import org.springframework.security.core.session.SessionRegistry;
 import org.springframework.security.web.context.SecurityContextRepository;
@@ -19,9 +20,9 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class SessionEstablisher {
 
-	private final SecurityContextHolderStrategy contextHolderStrategy;
 	private final SecurityContextRepository contextRepository;
 	private final SessionRegistry sessionRegistry;
+	private final SecurityContextHolderStrategy contextHolderStrategy = SecurityContextHolder.getContextHolderStrategy();
 
 	public void establish(Authentication authentication, HttpServletRequest request, HttpServletResponse response) {
 		if (request.getSession(false) != null) {
