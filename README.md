@@ -51,10 +51,10 @@ Demo accounts (created at start-up if missing; password `Password123` for all):
 
 | E-mail | Role |
 |---|---|
-| `admin@renthub.local` | administrator |
-| `owner@renthub.local` | owner, private person |
-| `company@renthub.local` | owner, company (ТОВ «Будпрокат», ЄДРПОУ 12345678) |
-| `renter@renthub.local` | renter |
+| `renthub.noreply+admin@gmail.com` | administrator |
+| `renthub.noreply+owner@gmail.com` | owner, private person |
+| `renthub.noreply+company@gmail.com` | owner, company (ТОВ «Будпрокат», ЄДРПОУ 12345678) |
+| `renthub.noreply+renter@gmail.com` | renter |
 
 Verification and password-reset e-mails are sent to Mailpit (`docker compose up -d mailpit`, UI at
 http://localhost:8025). Without Mailpit the request still succeeds and the failed send is logged.

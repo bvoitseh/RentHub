@@ -32,12 +32,12 @@ public class DemoUsersSeeder implements ApplicationRunner {
 	@Transactional
 	public void run(ApplicationArguments args) {
 		String hash = passwordEncoder.encode(PASSWORD);
-		seed("admin@renthub.local", "Адміністратор", "+380671000001", Role.ADMIN, null, null, null, hash);
-		seed("owner@renthub.local", "Олена Коваль", "+380671000002", Role.OWNER, OwnerType.PRIVATE, null, null, hash);
-		seed("company@renthub.local", "Ігор Мельник", "+380671000003", Role.OWNER, OwnerType.COMPANY,
+		seed("renthub.noreply+admin@gmail.com", "Адміністратор", "+380671000001", Role.ADMIN, null, null, null, hash);
+		seed("renthub.noreply+owner@gmail.com", "Олена Коваль", "+380671000002", Role.OWNER, OwnerType.PRIVATE, null, null, hash);
+		seed("renthub.noreply+company@gmail.com", "Ігор Мельник", "+380671000003", Role.OWNER, OwnerType.COMPANY,
 			"ТОВ «Будпрокат»", "12345678", hash);
-		seed("renter@renthub.local", "Андрій Шевчук", "+380671000004", Role.RENTER, null, null, null, hash);
-		log.info("Demo accounts (dev): admin@, owner@, company@, renter@renthub.local — password {}", PASSWORD);
+		seed("renthub.noreply+renter@gmail.com", "Андрій Шевчук", "+380671000004", Role.RENTER, null, null, null, hash);
+		log.info("Demo accounts: renthub.noreply+admin / +owner / +company / +renter @gmail.com — password {}", PASSWORD);
 	}
 
 	private void seed(String email, String name, String phone, Role role, OwnerType ownerType, String companyName,

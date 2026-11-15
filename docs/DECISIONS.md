@@ -112,3 +112,10 @@ the H2 console, Swagger UI and Mailpit as the default SMTP server; the PostgreSQ
 and the `postgres` compose service are gone. Demo accounts are always seeded when missing. Migrations stay in portable
 SQL, so PostgreSQL could be reintroduced later with a driver and a datasource URL. External services (SMTP, S3,
 geocoding) remain configurable through environment variables; `./gradlew bootRun` exports the root `.env`.
+
+## D-18 Demo accounts use real Gmail plus-addresses (2026-11-15)
+
+**Concerns:** FR-1, FR-2a, NFR-13 (CLAUDE.md 2.4 demo data). **Decision:** author's request, so that e-mails for the
+demo accounts arrive in a real inbox. The seeder creates `renthub.noreply+admin@gmail.com`, `+owner`, `+company` and
+`+renter`; Gmail delivers all four to the `renthub.noreply@gmail.com` mailbox, which is also the SMTP sender in the
+author's local `.env`. Previously seeded `@renthub.local` rows are not removed by the seeder.
