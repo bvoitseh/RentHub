@@ -46,6 +46,19 @@ Useful dev URLs:
 The dev profile needs no environment variables. Copy `.env.example` to `.env` to override anything
 (admin bootstrap, SMTP, S3, …); the file lists every variable the application reads.
 
+Demo accounts (dev profile only, created at start-up if missing; password `Password123` for all):
+
+| E-mail | Role |
+|---|---|
+| `admin@renthub.local` | administrator |
+| `owner@renthub.local` | owner, private person |
+| `company@renthub.local` | owner, company (ТОВ «Будпрокат», ЄДРПОУ 12345678) |
+| `renter@renthub.local` | renter |
+
+Verification and password-reset e-mails are sent to Mailpit (`docker compose up -d mailpit`, UI at
+http://localhost:8025). Without Mailpit the request still succeeds and the failed send is logged.
+The first production administrator is created from `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` when no admin exists.
+
 ## Build and checks
 
 ```bash

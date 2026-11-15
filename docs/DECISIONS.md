@@ -55,3 +55,50 @@ auth) will be whitelisted explicitly by their features, so nothing is public by 
 **Concerns:** FR-10, FR-22. The commission rate is needed by booking pricing and admin alike and is feature-agnostic,
 so `V1__settings.sql` creates the singleton row (default 10 %). It also proves Flyway on H2 and PostgreSQL. Demo
 seed data (accounts, categories, listings) comes with the respective features, `dev` profile only.
+
+## D-10 Phone format and password length (2026-11-15)
+
+**Concerns:** FR-1, NFR-6. The specification defines neither. **Decision:** phone must match the Ukrainian mobile
+format `+380XXXXXXXXX`; password 8–72 characters (72 is BCrypt's input limit). Both are validated on the client (Zod)
+and the server (Bean Validation) with the same Ukrainian messages.
+
+## D-11 Registration reveals a taken e-mail; resend is for the logged-in user (2026-11-15)
+
+**Concerns:** FR-1, NFR-14. Registering with an existing e-mail answers `409 user.email_taken`: without it the form
+would be unusable. Forgot-password stays silent (`202` always). "Resend verification" takes no e-mail: it is
+`POST /auth/resend-verification` for the authenticated user (an unverified user may log in, FR-1), so it cannot be
+used to probe addresses. Both remain rate-limited per e-mail.
+
+## D-12 FR-3c active-booking check is deferred to the booking feature (2026-11-15)
+
+**Concerns:** FR-3c. Bookings do not exist yet, so `AccountService.deactivate` has an explicit, documented check point
+(`assertNoActiveBookings`) that the availability-booking feature fills with the real query and the `409
+user.has_active_bookings` response listing the bookings. Hiding a deactivated user's listings is done by the
+catalogue feature's queries.
+
+## D-13 `PUT /users/me` and auto-login after registration (2026-11-15)
+
+**Concerns:** FR-1a ("the type is editable in the profile"), NFR-6. The API outline has no profile-edit endpoint, so
+`PUT /users/me` (name, phone, city, owner type) was added. Registration opens a session immediately
+(`201` + the user), so the new user lands on the site logged in, with the verification banner.
+
+## D-14 Account state is checked after the password (2026-11-15)
+
+**Concerns:** FR-2, FR-3c, NFR-14. Spring's default pre-authentication checks (locked/disabled) run before the
+password check and would reveal "blocked" or "deactivated" to anyone knowing the e-mail. `AppUserDetails` therefore
+reports every flag as enabled and `LoginService` checks `blocked` (403 `auth.blocked`) and `deactivated`
+(409 `auth.deactivated`, which is what offers "Відновити акаунт") only after the credentials were verified.
+
+## D-15 Sessions tracked in Spring's in-memory `SessionRegistry` (2026-11-15)
+
+**Concerns:** FR-3a, FR-3c, FR-20. "Old sessions are invalidated" needs a way to find a user's sessions. The standard
+`SessionRegistryImpl` + `ConcurrentSessionFilter` (unlimited sessions per user) is used; it is in-memory, consistent
+with the single-instance assumption already made for rate limits (NFR-14). A restart forgets registrations but not
+sessions, which is acceptable for this deployment.
+
+## D-16 Admin has no phone or city; the dev seeder creates an admin (2026-11-15)
+
+**Concerns:** FR-2a. The bootstrap admin comes from three variables only, so `users.phone` and `users.city` are
+nullable in the schema and required by registration validation instead. In the `dev` profile `DemoUsersSeeder`
+creates `admin@`, `owner@`, `company@` and `renter@renthub.local` (password `Password123`) regardless of the
+`ADMIN_*` variables; `AdminBootstrap` still runs first and applies when the variables are set.

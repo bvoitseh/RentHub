@@ -27,9 +27,13 @@ and business rules).
 | Package | Responsibility (status) |
 |---|---|
 | `config` | `SecurityConfig` (session + CSRF + BCrypt + method security), `SpaCsrfTokenRequestHandler`, `SecurityProblemHandler` (401/403 → advice), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `AppProperties` (`app.*`) |
-| `common.error` | `DomainException` hierarchy (`NotFound` 404, `Conflict` 409, `Forbidden` 403, `BusinessRule` 422), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
+| `common.error` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
+| `common.ratelimit` | `RateLimiter` (in-memory sliding window + lock, `Clock`-driven), `RateLimitProperties` (`app.rate-limit.*`), `RateLimitedException` 429 (NFR-14) |
+| `mail` | `MailGateway` interface + `SmtpMailGateway` (`JavaMailSender`), `EmailMessage` record |
+| `user` | accounts (FR-1…FR-3c): `domain` (`User`, `EmailToken`, `Role`, `OwnerType`), `security` (`AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`), `service` (`RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap`, `AccountMailListener`), `event` (mail-trigger records), `web` (`AuthController`, `MeController`, request/response records) |
+| `dev` | `DemoUsersSeeder` — demo accounts per role, `dev` profile only |
 | `admin` | `Settings` singleton entity (commission `feeRate`) + repository (done); categories, moderation, statistics (later) |
-| `user`, `catalog`, `booking`, `review`, `complaint`, `recommendation` | planned, see CLAUDE.md §2.5 |
+| `catalog`, `booking`, `review`, `complaint`, `recommendation` | planned, see CLAUDE.md §2.5 |
 
 **Layering:** controller → service → repository. Controllers hold no business rules and never return entities;
 DTOs are Java records mapped at the API boundary. JPA: lazy fetching, `open-in-view=false`.
@@ -45,8 +49,22 @@ Security failures are routed through `HandlerExceptionResolver` so the same advi
 
 **Security model (NFR-4):** server-side HTTP session, cookie `RENTHUB_SESSION` (HttpOnly, SameSite=Lax, Secure in
 prod, 7-day timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA pattern from the Spring
-Security reference); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks in services. Default rule is
-`anyRequest().authenticated()`; public paths are whitelisted explicitly (`/actuator/health`, dev tools in `dev`).
+Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks
+in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
+(`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`,
+dev tools in `dev`). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
+(`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
+(so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
+session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
+a user (password reset, deactivation, later admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
+Logout is Spring Security's filter at `POST /api/v1/auth/logout` (204). Rate limits (NFR-14) are enforced in the
+services via `RateLimiter`, keyed per IP and per e-mail.
+
+**Accounts (FR-1…FR-3c) in short:** `User` owns the rules (owner type / company fields, verify, deactivate, restore);
+`EmailTokenService` issues 256-bit random tokens, stores only SHA-256, one usable token per user and type, single
+use; verification 24 h, reset 1 h. E-mails go through application events (`VerificationEmailRequested`,
+`PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
+(after commit, off the request thread, failures logged). `AdminBootstrap` (FR-2a) runs at start-up.
 
 **Configuration & profiles:** `application.yml` (shared; secrets only via `${ENV}`), `application-dev.yml`
 (file H2 `./data/renthub`, H2 console `/h2-console`, Swagger `/swagger-ui.html`, Mailpit), `application-prod.yml`
@@ -58,10 +76,11 @@ Security reference); BCrypt; `@EnableMethodSecurity` for role checks; ownership 
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.
 
-**Scheduled jobs:** none yet (booking completion/expiry and review publishing come with their features).
+**Scheduled jobs:** `RateLimiter.evictIdleBuckets` (every 10 min). Booking completion/expiry and review publishing
+come with their features.
 
-**Integrations:** none yet. Object storage, geocoding and e-mail will sit behind small application-owned interfaces
-(one per capability) with a real and a stub/dev implementation chosen per profile.
+**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; Mailpit in dev, any provider via `SMTP_*`).
+Object storage and geocoding will follow the same pattern: one small application-owned interface per capability.
 
 ## 3. Frontend
 
@@ -72,18 +91,24 @@ ESLint enforces `max-lines: 150` on every file.
 ```
 src/
 ├─ main.tsx, index.css          entry, Tailwind theme (brand colours)
-├─ app/        App.tsx (providers) · router.tsx (route table) · queryClient.ts
-├─ api/        client.ts (fetch wrapper: JSON, same-origin cookies, CSRF header, ProblemError) · problem.ts · csrf.ts · health.ts
+├─ app/        App.tsx (providers) · router.tsx (route table, auth pages lazy-loaded) · queryClient.ts
+├─ api/        client.ts (fetch wrapper: JSON, same-origin cookies, CSRF header, ProblemError) · problem.ts · csrf.ts
+│              · formErrors.ts (backend field violations → react-hook-form) · health.ts
 ├─ components/layout/  AppLayout · Header · Footer · BackendStatus
-├─ components/ui/      Button · Spinner/LoadingState · Alert · ErrorState · EmptyState
-├─ pages/      HomePage · NotFoundPage (pages only compose components)
-├─ i18n/uk.ts  all Ukrainian UI texts (split per feature when near 150 lines)
-└─ features/<feature>/{components,hooks,api,schemas}   (added per feature)
+├─ components/ui/      Button · Input · Select · Checkbox · FormField · Dialog · Spinner/LoadingState · Alert · ErrorState · EmptyState
+├─ pages/      Home · NotFound · Login · Register · ForgotPassword · ResetPassword · VerifyEmail · Profile
+├─ i18n/uk.ts  index composing src/i18n/uk/{auth,profile,validation}.ts
+└─ features/auth/   types.ts · api/{authApi,accountApi}.ts · hooks/{useCurrentUser,useAuthMutations,useAccountMutations,
+                    usePasswordReset,useEmailVerification}.ts · schemas/*.ts (Zod) · components/ (forms, RestoreAccountDialog,
+                    OwnerTypeFields, VerifyEmailBanner, UserMenu, RequireAuth, AuthCard, GeoConsentCard, DeactivateAccountCard)
 ```
 
 Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via
 TanStack Query hooks (`useXxx`); every request renders loading / empty / error states (NFR-6); errors show the
-backend's Ukrainian `detail` via `problemMessage()`.
+backend's Ukrainian `detail` via `problemMessage()`. Auth state is the `['auth','me']` query (null for guests; a 401
+is not an error); login/register/restore set it, logout and deactivation clear the whole cache. `RequireAuth` guards
+routes (redirects guests to `/login` and back). Forms: react-hook-form + Zod schemas with Ukrainian messages, backend
+violations applied with `applyServerErrors`.
 
 Dev: Vite on :5173 proxies `/api` and `/actuator` to Spring Boot on :8080 (same origin, so session + CSRF cookies
 work without CORS). Prod: Nginx serves `dist/` and proxies `/api`.
