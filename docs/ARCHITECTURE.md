@@ -10,7 +10,7 @@ renthub/
 ├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml   minio (+ bucket init) · mailpit
+├─ docker-compose.yml   minio (+ bucket init)
 └─ dev.env              local environment (git-ignored); the keys are listed in the README
 ```
 
@@ -67,7 +67,7 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 (after commit, off the request thread, failures logged). `AdminBootstrap` (FR-2a) runs at start-up.
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
-`/h2-console`, Swagger `/swagger-ui.html`, Mailpit by default; secrets and external services only via `${ENV}`
+`/h2-console`, Swagger `/swagger-ui.html`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
 variables, which `./gradlew bootRun` exports from the root `dev.env` (git-ignored; keys listed in the README).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
@@ -79,7 +79,7 @@ runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validate
 **Scheduled jobs:** `RateLimiter.evictIdleBuckets` (every 10 min). Booking completion/expiry and review publishing
 come with their features.
 
-**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; Mailpit by default, any relay via `SMTP_*`).
+**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; relay configured by `SMTP_*`, Gmail defaults).
 Object storage and geocoding will follow the same pattern: one small application-owned interface per capability.
 
 ## 3. Frontend

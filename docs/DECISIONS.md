@@ -126,3 +126,10 @@ author's local `.env`. Previously seeded `@renthub.local` rows are not removed b
 `.env.example` was removed; the git-ignored `dev.env` at the repository root is the single source of truth for local
 configuration and secrets, read by `./gradlew bootRun` (empty keys are skipped so `application.yml` defaults apply).
 The list of keys is kept in the README so a fresh clone knows what the file may contain.
+
+## D-20 No Mailpit; e-mail always goes through a real SMTP relay (2026-11-15)
+
+**Concerns:** NFR-13 ("in dev, use MinIO and Mailpit"), CLAUDE.md §3. **Decision:** author's request. The Mailpit
+service was removed from Docker Compose; `application.yml` defaults the relay to Gmail (`smtp.gmail.com:587`, auth +
+STARTTLS) and `MAIL_FROM` to `SMTP_USERNAME`, so `dev.env` only needs the Gmail address and an app password. Demo
+accounts are real plus-addresses (D-18), so every e-mail can be checked in the `renthub.noreply@gmail.com` inbox.

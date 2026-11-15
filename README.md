@@ -14,18 +14,19 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 |---|---|
 | Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode), Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: MinIO (S3), Mailpit (SMTP catcher) |
+| Infrastructure | Docker Compose: MinIO (S3) |
 
 ## Prerequisites
 
 - JDK 25, Node.js 22+ (24 recommended), npm 10+
-- Docker Desktop (only for MinIO / Mailpit)
+- Docker Desktop (only for MinIO, catalogue photos)
+- An SMTP account for outgoing e-mail (Gmail with an app password works)
 
 ## Run locally
 
 ```bash
-# 1. optional infrastructure (Mailpit UI: http://localhost:8025, MinIO console: http://localhost:9001)
-docker compose up -d minio mailpit
+# 1. optional infrastructure (MinIO console: http://localhost:9001)
+docker compose up -d minio
 
 # 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations, demo accounts
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
@@ -65,8 +66,9 @@ Demo accounts (created at start-up if missing; password `Password123` for all):
 | `renthub.noreply+company@gmail.com` | owner, company (ТОВ «Будпрокат», ЄДРПОУ 12345678) |
 | `renthub.noreply+renter@gmail.com` | renter |
 
-Verification and password-reset e-mails are sent to Mailpit (`docker compose up -d mailpit`, UI at
-http://localhost:8025). Without Mailpit the request still succeeds and the failed send is logged.
+Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
+defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
+still succeeds.
 An administrator is also created from `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` when they are set and no admin exists.
 
 ## Build and checks
@@ -79,7 +81,7 @@ cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file)
 ## Configuration
 
 One configuration for everything, no Spring profiles (educational project, see `docs/DECISIONS.md` D-17): embedded H2
-in PostgreSQL mode, H2 console, Swagger UI, Mailpit on `localhost:1025` unless `SMTP_*` point elsewhere.
+in PostgreSQL mode, H2 console, Swagger UI, outgoing e-mail through the `SMTP_*` relay from `dev.env`.
 
 ## Git workflow
 
