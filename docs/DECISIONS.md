@@ -119,3 +119,10 @@ geocoding) remain configurable through environment variables; `./gradlew bootRun
 demo accounts arrive in a real inbox. The seeder creates `renthub.noreply+admin@gmail.com`, `+owner`, `+company` and
 `+renter`; Gmail delivers all four to the `renthub.noreply@gmail.com` mailbox, which is also the SMTP sender in the
 author's local `.env`. Previously seeded `@renthub.local` rows are not removed by the seeder.
+
+## D-19 `dev.env` is the only environment file; no committed example (2026-11-15)
+
+**Concerns:** CLAUDE.md §1.4 / §3 ("commit a `.env.example`"), NFR-4. **Decision:** author's request. The committed
+`.env.example` was removed; the git-ignored `dev.env` at the repository root is the single source of truth for local
+configuration and secrets, read by `./gradlew bootRun` (empty keys are skipped so `application.yml` defaults apply).
+The list of keys is kept in the README so a fresh clone knows what the file may contain.

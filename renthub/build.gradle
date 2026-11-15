@@ -41,10 +41,10 @@ tasks.named('test') {
 	enabled = false
 }
 
-// `./gradlew bootRun` exports the variables from the repository-root `.env` (git-ignored, see `.env.example`)
-// to the process; variables already present in the shell environment win.
+// `./gradlew bootRun` exports the variables from the repository-root `dev.env` (git-ignored) to the process.
+// Keys with an empty value are skipped (the defaults in application.yml apply); shell variables win.
 tasks.named('bootRun') {
-	environment(dotEnv(rootDir.parentFile.toPath().resolve('.env').toFile()))
+	environment(dotEnv(rootDir.parentFile.toPath().resolve('dev.env').toFile()))
 }
 
 static Map<String, String> dotEnv(File file) {
@@ -62,7 +62,7 @@ static Map<String, String> dotEnv(File file) {
 		if (value.length() >= 2 && (value.startsWith('"') && value.endsWith('"') || value.startsWith("'") && value.endsWith("'"))) {
 			value = value[1..-2]
 		}
-		if (System.getenv(key.trim()) == null) {
+		if (!value.isEmpty() && System.getenv(key.trim()) == null) {
 			vars[key.trim()] = value
 		}
 	}

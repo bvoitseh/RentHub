@@ -11,7 +11,7 @@ renthub/
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
 ├─ docker-compose.yml   minio (+ bucket init) · mailpit
-└─ .env.example         every environment variable the app reads
+└─ dev.env              local environment (git-ignored); the keys are listed in the README
 ```
 
 ## 2. Backend
@@ -68,7 +68,7 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
 `/h2-console`, Swagger `/swagger-ui.html`, Mailpit by default; secrets and external services only via `${ENV}`
-variables (`.env.example`), which `./gradlew bootRun` exports from the root `.env`.
+variables, which `./gradlew bootRun` exports from the root `dev.env` (git-ignored; keys listed in the README).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
 runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validates (`ddl-auto=validate`). Timestamps are

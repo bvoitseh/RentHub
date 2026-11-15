@@ -43,9 +43,18 @@ Useful dev URLs:
 | http://localhost:8080/swagger-ui.html | OpenAPI UI |
 | http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
 
-The application needs no environment variables. Copy `.env.example` to `.env` to override anything
-(admin bootstrap, SMTP, S3, …); the file lists every variable the application reads. `./gradlew bootRun` exports the
-root `.env` to the application automatically (variables already set in the shell take precedence).
+The application needs no environment variables. Local overrides live in `dev.env` at the repository root
+(git-ignored, the single place for secrets); `./gradlew bootRun` exports it automatically, a key left empty keeps the
+default from `application.yml`, and variables already set in the shell take precedence. Keys it may contain:
+
+| Group | Keys |
+|---|---|
+| server / app | `SERVER_PORT`, `APP_BASE_URL`, `MAIL_FROM` |
+| SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
+| admin bootstrap (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` |
+| rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
+| object storage (later) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` |
+| geocoding (later) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` |
 
 Demo accounts (created at start-up if missing; password `Password123` for all):
 

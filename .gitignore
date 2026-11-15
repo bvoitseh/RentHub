@@ -1,7 +1,7 @@
-# Secrets / environment
+# Secrets / environment (dev.env is the local configuration, never committed)
+*.env
 .env
 .env.*
-!.env.example
 
 # Backend (Gradle)
 renthub/.gradle/
