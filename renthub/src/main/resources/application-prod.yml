@@ -1,0 +1,23 @@
+# Production: PostgreSQL, HTTPS behind Nginx, no dev tooling. All credentials come from the environment.
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/renthub}
+    username: ${DB_USERNAME:renthub}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+  h2:
+    console:
+      enabled: false
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+  forward-headers-strategy: native
+
+logging:
+  level:
+    root: INFO
