@@ -1,4 +1,8 @@
-/** All Ukrainian UI texts live here (split per feature into src/i18n/uk/<feature>.ts when this file nears 150 lines). */
+import { auth } from '@/i18n/uk/auth'
+import { profile } from '@/i18n/uk/profile'
+import { validation } from '@/i18n/uk/validation'
+
+/** All Ukrainian UI texts. Feature texts live in src/i18n/uk/<feature>.ts and are composed here. */
 export const uk = {
   app: {
     name: 'RentHub',
@@ -28,5 +32,9 @@ export const uk = {
     errorTitle: 'Сталася помилка',
     errorGeneric: 'Щось пішло не так. Спробуйте пізніше.',
     errorNetwork: 'Немає з’єднання із сервером. Перевірте мережу та спробуйте ще раз.',
+    or: 'або',
   },
+  auth,
+  profile,
+  validation,
 } as const

@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { UserMenu } from '@/features/auth/components/UserMenu'
 import { uk } from '@/i18n/uk'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -9,16 +10,19 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
 export function Header() {
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between px-4 sm:px-6">
-        <NavLink to="/" className="flex items-center gap-2 text-lg font-bold text-brand-700">
-          <img src="/favicon.svg" alt="" className="h-7 w-7" />
-          {uk.app.name}
-        </NavLink>
-        <nav aria-label={uk.nav.main} className="flex items-center gap-1">
-          <NavLink to="/" end className={navLinkClass}>
-            {uk.nav.home}
+      <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="flex items-center gap-4">
+          <NavLink to="/" className="flex items-center gap-2 text-lg font-bold text-brand-700">
+            <img src="/favicon.svg" alt="" className="h-7 w-7" />
+            {uk.app.name}
           </NavLink>
-        </nav>
+          <nav aria-label={uk.nav.main} className="hidden items-center gap-1 sm:flex">
+            <NavLink to="/" end className={navLinkClass}>
+              {uk.nav.home}
+            </NavLink>
+          </nav>
+        </div>
+        <UserMenu />
       </div>
     </header>
   )
