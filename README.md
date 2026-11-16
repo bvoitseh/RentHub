@@ -50,7 +50,7 @@ default from `application.yml`, and variables already set in the shell take prec
 
 | Group | Keys |
 |---|---|
-| server / app | `SERVER_PORT`, `APP_BASE_URL`, `MAIL_FROM` |
+| server / app | `SERVER_PORT`, `APP_BASE_URL` |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin bootstrap (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` |
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
