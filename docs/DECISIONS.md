@@ -137,3 +137,10 @@ optional keys commented out rather than left empty.
 service was removed from Docker Compose; `application.yml` defaults the relay to Gmail (`smtp.gmail.com:587`, auth +
 STARTTLS) and `MAIL_FROM` to `SMTP_USERNAME`, so `dev.env` only needs the Gmail address and an app password. Demo
 accounts are real plus-addresses (D-18), so every e-mail can be checked in the `renthub.noreply@gmail.com` inbox.
+
+## D-21 No seeded demo accounts (2026-11-16)
+
+**Concerns:** CLAUDE.md 2.4 (demo accounts for each role), FR-2a. **Decision:** author's request. `DemoUsersSeeder`
+and the `dev` package were removed, which supersedes D-18. The only account created by the application is the first
+administrator from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` (`AdminBootstrap`, FR-2a); every other account is
+registered through the UI. Rows seeded by earlier runs stay in the local H2 file until deleted by hand.

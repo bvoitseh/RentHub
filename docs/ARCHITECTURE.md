@@ -31,7 +31,6 @@ and business rules).
 | `common.ratelimit` | `RateLimiter` (in-memory sliding window + lock, `Clock`-driven), `RateLimitProperties` (`app.rate-limit.*`), `RateLimitedException` 429 (NFR-14) |
 | `mail` | `MailGateway` interface + `SmtpMailGateway` (`JavaMailSender`), `EmailMessage` record |
 | `user` | accounts (FR-1…FR-3c): `domain` (`User`, `EmailToken`, `Role`, `OwnerType`), `security` (`AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`), `service` (`RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap`, `AccountMailListener`), `event` (mail-trigger records), `web` (`AuthController`, `MeController`, request/response records) |
-| `dev` | `DemoUsersSeeder` — demo accounts per role, created at start-up when missing |
 | `admin` | `Settings` singleton entity (commission `feeRate`) + repository (done); categories, moderation, statistics (later) |
 | `catalog`, `booking`, `review`, `complaint`, `recommendation` | planned, see CLAUDE.md §2.5 |
 

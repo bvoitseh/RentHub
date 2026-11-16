@@ -28,7 +28,7 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 # 1. optional infrastructure (MinIO console: http://localhost:9001)
 docker compose up -d minio
 
-# 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations, demo accounts
+# 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
 
 # 3. frontend — Vite dev server with /api proxy to :8080
@@ -59,19 +59,13 @@ precedence. Keys it may contain:
 | object storage (later) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` |
 | geocoding (later) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` |
 
-Demo accounts (created at start-up if missing; password `Password123` for all):
-
-| E-mail | Role |
-|---|---|
-| `renthub.noreply+admin@gmail.com` | administrator |
-| `renthub.noreply+owner@gmail.com` | owner, private person |
-| `renthub.noreply+company@gmail.com` | owner, company (ТОВ «Будпрокат», ЄДРПОУ 12345678) |
-| `renthub.noreply+renter@gmail.com` | renter |
-
 Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
 defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
 still succeeds.
-An administrator is also created from `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` when they are set and no admin exists.
+
+There are no seeded accounts. The first administrator is created at start-up from `ADMIN_EMAIL`, `ADMIN_PASSWORD`
+and `ADMIN_NAME` in `dev.env` when all three are set and no administrator exists yet; owners and renters register
+through the UI.
 
 ## Build and checks
 
