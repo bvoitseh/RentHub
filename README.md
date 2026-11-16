@@ -44,9 +44,11 @@ Useful dev URLs:
 | http://localhost:8080/swagger-ui.html | OpenAPI UI |
 | http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
 
-The application needs no environment variables. Local overrides live in `dev.env` at the repository root
-(git-ignored, the single place for secrets); `./gradlew bootRun` exports it automatically, a key left empty keeps the
-default from `application.yml`, and variables already set in the shell take precedence. Keys it may contain:
+The application needs no environment variables except SMTP credentials for e-mail. Local configuration lives in
+`dev.env` at the repository root (git-ignored, the single place for secrets). Spring Boot imports it itself
+(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; the syntax is Java `.properties`
+(`KEY=value`, no inline comments; comment a key out to keep the default), and real environment variables take
+precedence. Keys it may contain:
 
 | Group | Keys |
 |---|---|

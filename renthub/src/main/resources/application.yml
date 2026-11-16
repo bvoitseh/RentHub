@@ -3,6 +3,11 @@
 spring:
   application:
     name: renthub
+  config:
+    # Local configuration and secrets from the git-ignored repository-root dev.env (Java .properties syntax),
+    # whichever of the two is found from the working directory (repository root or renthub/). Real environment
+    # variables take precedence over the file.
+    import: optional:file:./dev.env[.properties],optional:file:../dev.env[.properties]
   datasource:
     url: jdbc:h2:file:./data/renthub;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE
     username: sa

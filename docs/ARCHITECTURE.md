@@ -68,7 +68,7 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
 `/h2-console`, Swagger `/swagger-ui.html`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
-variables, which `./gradlew bootRun` exports from the root `dev.env` (git-ignored; keys listed in the README).
+variables or the root `dev.env` (git-ignored, imported by `spring.config.import`; keys listed in the README).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
 runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validates (`ddl-auto=validate`). Timestamps are

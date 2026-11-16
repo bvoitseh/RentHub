@@ -126,6 +126,10 @@ author's local `.env`. Previously seeded `@renthub.local` rows are not removed b
 `.env.example` was removed; the git-ignored `dev.env` at the repository root is the single source of truth for local
 configuration and secrets, read by `./gradlew bootRun` (empty keys are skipped so `application.yml` defaults apply).
 The list of keys is kept in the README so a fresh clone knows what the file may contain.
+Update 2026-11-16: the file is imported by Spring Boot itself (`spring.config.import=optional:file:./dev.env
+[.properties],optional:file:../dev.env[.properties]`) instead of a Gradle `bootRun` hook, so IntelliJ run
+configurations and `java -jar` see it too; the Gradle loader was removed. `.properties` syntax: no inline comments,
+optional keys commented out rather than left empty.
 
 ## D-20 No Mailpit; e-mail always goes through a real SMTP relay (2026-11-15)
 
