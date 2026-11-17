@@ -1,4 +1,4 @@
-package com.bohakka.renthub.config;
+package com.bohakka.renthub.properties;
 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.boot.context.properties.ConfigurationProperties;

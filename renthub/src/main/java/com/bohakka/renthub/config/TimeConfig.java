@@ -1,5 +1,6 @@
 package com.bohakka.renthub.config;
 
+import com.bohakka.renthub.properties.AppProperties;
 import java.time.Clock;
 import java.time.ZoneId;
 import org.springframework.context.annotation.Bean;

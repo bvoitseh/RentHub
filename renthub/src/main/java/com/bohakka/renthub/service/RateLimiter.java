@@ -1,6 +1,6 @@
 package com.bohakka.renthub.service;
 
-import com.bohakka.renthub.config.RateLimitProperties.Policy;
+import com.bohakka.renthub.properties.RateLimitProperties.Policy;
 import com.bohakka.renthub.exception.RateLimitedException;
 import java.time.Clock;
 import java.time.Duration;

@@ -1,4 +1,4 @@
-package com.bohakka.renthub.config;
+package com.bohakka.renthub.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,7 +15,7 @@ import org.springframework.util.StringUtils;
  * as a plain value, while BREACH protection (XOR) still applies to tokens rendered as request parameters.
  * Eagerly resolving the token makes sure the cookie is written on the first (GET) request.
  */
-final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler {
+public final class SpaCsrfTokenRequestHandler implements CsrfTokenRequestHandler {
 
 	private final CsrfTokenRequestHandler plain = new CsrfTokenRequestAttributeHandler();
 	private final CsrfTokenRequestHandler xor = new XorCsrfTokenRequestAttributeHandler();

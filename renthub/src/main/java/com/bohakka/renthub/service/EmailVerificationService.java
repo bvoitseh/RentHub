@@ -1,6 +1,6 @@
 package com.bohakka.renthub.service;
 
-import com.bohakka.renthub.config.RateLimitProperties;
+import com.bohakka.renthub.properties.RateLimitProperties;
 import com.bohakka.renthub.entity.EmailToken;
 import com.bohakka.renthub.entity.EmailTokenType;
 import com.bohakka.renthub.entity.User;

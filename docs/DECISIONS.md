@@ -149,5 +149,6 @@ registered through the UI. Rows seeded by earlier runs stay in the local H2 file
 
 **Concerns:** CLAUDE.md §3 layout (package-by-feature recommended). **Decision:** author's request: the application
 is one monolith, so feature packages with their own `web/service/repository/domain` sub-packages added nesting
-without benefit. All backend classes now live in flat layer packages: `config`, `controller`, `dto`, `entity`,
-`repository`, `service`, `security`, `exception`, `event`. Behaviour, endpoints and database are unchanged.
+without benefit. All backend classes now live in flat layer packages: `config` (only `@Configuration` classes),
+`properties` (`@ConfigurationProperties` records), `controller`, `dto`, `entity`, `repository`, `service`, `security`,
+`exception`, `event`. Behaviour, endpoints and database are unchanged.

@@ -1,7 +1,7 @@
 package com.bohakka.renthub.service;
 
 import com.bohakka.renthub.RenthubApplication;
-import com.bohakka.renthub.config.AppProperties;
+import com.bohakka.renthub.properties.AppProperties;
 import com.bohakka.renthub.dto.EmailMessage;
 import com.bohakka.renthub.event.PasswordResetEmailRequested;
 import com.bohakka.renthub.event.VerificationEmailRequested;

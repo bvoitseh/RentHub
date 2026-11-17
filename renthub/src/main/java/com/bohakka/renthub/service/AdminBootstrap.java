@@ -1,6 +1,6 @@
 package com.bohakka.renthub.service;
 
-import com.bohakka.renthub.config.AdminBootstrapProperties;
+import com.bohakka.renthub.properties.AdminBootstrapProperties;
 import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.repository.UserRepository;
