@@ -1,76 +1,53 @@
 package com.bohakka.renthub.service.impl;
 
+import com.bohakka.renthub.entity.EmailToken;
+import com.bohakka.renthub.entity.EmailTokenType;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.exception.BusinessRuleException;
+import com.bohakka.renthub.repository.EmailTokenRepository;
 import com.bohakka.renthub.repository.UserRepository;
 import com.bohakka.renthub.service.EmailTokenService;
-import com.bohakka.renthub.service.EmailTokenType;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Base64;
 import java.util.HexFormat;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Service;
 
-/**
- * Redis-backed {@link EmailTokenService}. {@code email-token:{TYPE}:{sha256}} holds the user id and
- * {@code email-token:{TYPE}:user:{id}} the user's current hash; both expire after {@link EmailTokenType#validity()}.
- * Expiry is Redis's TTL; single use is guaranteed by the atomic GETDEL on consumption.
- */
+/** {@link EmailTokenService} over the Redis {@link EmailTokenRepository}; expiry is the entry's Redis TTL. */
 @Service
 @RequiredArgsConstructor
 public class EmailTokenServiceImpl implements EmailTokenService {
 
 	private static final int TOKEN_BYTES = 32;
 
-	/** Atomically voids the user's previous token of this type and stores the new one, both with the same TTL. */
-	private static final RedisScript<Long> STORE = RedisScript.of("""
-		local previous = redis.call('GET', KEYS[2])
-		if previous then
-			redis.call('DEL', ARGV[3] .. previous)
-		end
-		redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2])
-		redis.call('SET', KEYS[2], ARGV[4], 'PX', ARGV[2])
-		return 1
-		""", Long.class);
-
-	private final StringRedisTemplate redis;
+	private final EmailTokenRepository tokens;
 	private final UserRepository users;
 	private final SecureRandom random = new SecureRandom();
 
 	@Override
 	public String issue(User user, EmailTokenType type) {
+		tokens.deleteAll(tokens.findByUserIdAndType(user.getId(), type));
 		byte[] bytes = new byte[TOKEN_BYTES];
 		random.nextBytes(bytes);
 		String raw = Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-		String hash = hash(raw);
-		redis.execute(STORE, List.of(tokenKey(type, hash), userKey(type, user.getId())),
-			String.valueOf(user.getId()), String.valueOf(type.validity().toMillis()), tokenKey(type, ""), hash);
+		tokens.save(new EmailToken(hash(raw), user.getId(), type));
 		return raw;
 	}
 
+	/**
+	 * Find-then-delete is not atomic: two simultaneous requests with the same link could both pass. Both would come
+	 * from the link holder and do the same thing (verify, or set a password), so this is accepted (DECISIONS.md D-28).
+	 */
 	@Override
 	public User consume(String raw, EmailTokenType type) {
-		String hash = hash(raw);
-		String userId = redis.opsForValue().getAndDelete(tokenKey(type, hash));
-		if (userId == null) {
-			throw invalid();
-		}
-		redis.delete(userKey(type, Long.valueOf(userId)));
-		return users.findById(Long.valueOf(userId)).orElseThrow(EmailTokenServiceImpl::invalid);
-	}
-
-	private static String tokenKey(EmailTokenType type, String hash) {
-		return "email-token:" + type + ":" + hash;
-	}
-
-	private static String userKey(EmailTokenType type, Long userId) {
-		return "email-token:" + type + ":user:" + userId;
+		EmailToken token = tokens.findById(hash(raw))
+			.filter(t -> t.getType() == type)
+			.orElseThrow(EmailTokenServiceImpl::invalid);
+		tokens.delete(token);
+		return users.findById(token.getUserId()).orElseThrow(EmailTokenServiceImpl::invalid);
 	}
 
 	private static BusinessRuleException invalid() {

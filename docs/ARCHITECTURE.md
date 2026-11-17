@@ -25,14 +25,14 @@ New features add classes to these packages; a new package is created only for a 
 
 | Package | Contents |
 |---|---|
-| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
+| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA entities and their enums: `User`, `Role`, `OwnerType` |
-| `repository` | Spring Data repositories: `UserRepository` |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService` (+ `EmailTokenType` with validity), `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
-| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (Redis), `EmailTokenServiceImpl` (Redis), `SmtpMailGateway` |
+| `entity` | JPA entities `User` (+ `Role`, `OwnerType`); Redis entity `EmailToken` (+ `EmailTokenType` with validity) |
+| `repository` | Spring Data repositories: `UserRepository` (JPA), `EmailTokenRepository` (Redis) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (Redis), `EmailTokenServiceImpl` (over the Redis repository), `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
@@ -64,9 +64,10 @@ services via `RateLimiter`, keyed per IP and per e-mail, stored in Redis (sorted
 updated by one Lua script so concurrent requests cannot overshoot the limit).
 
 **Accounts (FR-1…FR-3c) in short:** `User` owns the rules (owner type / company fields, verify, deactivate, restore);
-`EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256 in Redis
-(`email-token:{TYPE}:{hash}` → user id, plus a per-user pointer so a new token voids the old one); expiry is the Redis
-TTL (verification 24 h, reset 1 h) and single use is the atomic `GETDEL` on consumption. E-mails go through application events (`VerificationEmailRequested`,
+`EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256, as the `@RedisHash` entity
+`EmailToken` in the Spring Data Redis `EmailTokenRepository` (indexed by `userId` and `type`, so a new token voids the
+old one); expiry is the entry's `@TimeToLive` (verification 24 h, reset 1 h), and keyspace events (`config.RedisConfig`)
+let Spring Data drop expired tokens from the indexes. Consumption is find-then-delete (D-28). E-mails go through application events (`VerificationEmailRequested`,
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
 (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 

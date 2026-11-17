@@ -193,3 +193,15 @@ TTL instead of a scheduled job; e-mail tokens are Redis keys with TTL, consumed 
 table and its entity/repository were removed (migration `V3__drop_email_tokens.sql`). Redis is now required: without
 it the health check reports DOWN and login/registration/reset answer 500. Consuming a token happens before the
 database transaction commits; if that transaction fails, the link is spent and the user requests a new one.
+
+## D-28 E-mail tokens through a Spring Data Redis repository (2026-11-17)
+
+**Concerns:** NFR-5, FR-1, FR-3a; refines D-27. **Decision:** author's request, for the same repository style as JPA.
+`EmailToken` is a `@RedisHash` entity (id = SHA-256 of the raw token, `@Indexed` `userId` and `type`, `@TimeToLive`
+from `EmailTokenType`), stored by `EmailTokenRepository extends CrudRepository`. `config.RedisConfig` enables Redis
+repositories with keyspace events (`ON_STARTUP` sets Redis `notify-keyspace-events`), so tokens expired by TTL are also
+removed from the indexes (Spring keeps a short-lived `:phantom` copy for that). Consumption is find-then-delete and
+therefore not atomic: two simultaneous requests with the same link could both succeed; both come from the link holder
+and do the same thing, so this is accepted. The rate limiter stays on `StringRedisTemplate` + Lua, because counters on
+a sorted set are not entity CRUD. Spring Data runs in strict mode (JPA + Redis); each repository is assigned by its
+entity annotation (`@Entity` / `@RedisHash`).

@@ -1,10 +1,11 @@
 package com.bohakka.renthub.service;
 
+import com.bohakka.renthub.entity.EmailTokenType;
 import com.bohakka.renthub.entity.User;
 
 /**
  * Issues and consumes single-use e-mail link tokens (NFR-5): 256-bit random raw token, only its SHA-256 stored,
- * one usable token per user and type, consumed exactly once before it expires.
+ * one usable token per user and type, consumed once before it expires.
  */
 public interface EmailTokenService {
 
