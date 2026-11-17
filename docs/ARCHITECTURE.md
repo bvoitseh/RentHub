@@ -20,26 +20,27 @@ renthub/
 Scheduling + `@Async`, Actuator, Flyway, springdoc-openapi, Lombok. Embedded H2 in PostgreSQL mode, one configuration
 without Spring profiles (D-17). No backend tests by project policy.
 
-**Package-by-feature** under `com.bohakka.renthub`; each feature package uses `web/` (controllers + DTO records
-+ mappers), `service/` (use cases, transactions, ownership checks), `repository/` (Spring Data), `domain/` (entities
-and business rules).
+**Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
+New features add classes to these packages; a new package is created only for a genuinely new kind of class.
 
-| Package | Responsibility (status) |
+| Package | Contents |
 |---|---|
-| `config` | `SecurityConfig` (session + CSRF + BCrypt + method security), `SpaCsrfTokenRequestHandler`, `SecurityProblemHandler` (401/403 → advice), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `AppProperties` (`app.*`) |
-| `common.error` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
-| `common.ratelimit` | `RateLimiter` (in-memory sliding window + lock, `Clock`-driven), `RateLimitProperties` (`app.rate-limit.*`), `RateLimitedException` 429 (NFR-14) |
-| `mail` | `MailGateway` interface + `SmtpMailGateway` (`JavaMailSender`), `EmailMessage` record |
-| `user` | accounts (FR-1…FR-3c): `domain` (`User`, `EmailToken`, `Role`, `OwnerType`), `security` (`AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`), `service` (`RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap`, `AccountMailListener`), `event` (mail-trigger records), `web` (`AuthController`, `MeController`, request/response records) |
-| `admin` | `Settings` singleton entity (commission `feeRate`) + repository (done); categories, moderation, statistics (later) |
-| `catalog`, `booking`, `review`, `complaint`, `recommendation` | planned, see CLAUDE.md §2.5 |
+| `config` | `SecurityConfig` (session + CSRF + BCrypt + method security), `SpaCsrfTokenRequestHandler`, `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
+| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/me`) |
+| `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
+| `entity` | JPA entities and their enums: `User`, `EmailToken`, `Settings` (commission `feeRate` singleton), `Role`, `OwnerType`, `EmailTokenType` |
+| `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository`, `SettingsRepository` |
+| `service` | use cases with transactions and ownership checks: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap` (FR-2a), `AccountMailListener`, `RateLimiter` (NFR-14), `MailGateway` + `SmtpMailGateway` |
+| `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice) |
+| `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
+| `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
 
 **Layering:** controller → service → repository. Controllers hold no business rules and never return entities;
 DTOs are Java records mapped at the API boundary. JPA: lazy fetching, `open-in-view=false`.
 
-**Where business rules will live:** availability and overbooking protection (`booking/domain` + service with
-equipment row lock, FR-9/FR-11), booking state transitions (one enum-driven place, FR-14), pricing/commission
-(`booking/domain`, reads `Settings.feeRate`, FR-10), season logic (`catalog/domain`), rating (`review`).
+**Where business rules will live:** availability and overbooking protection (booking service with equipment row
+lock, FR-9/FR-11), booking state transitions (one enum-driven place in `entity`, FR-14), pricing/commission (service,
+reads `Settings.feeRate`, FR-10), season logic and rating in their services; entity methods guard their own invariants.
 
 **Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
 Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions
@@ -78,7 +79,7 @@ runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validate
 **Scheduled jobs:** `RateLimiter.evictIdleBuckets` (every 10 min). Booking completion/expiry and review publishing
 come with their features.
 
-**Integrations:** e-mail via `mail.MailGateway` (SMTP implementation; relay configured by `SMTP_*`, Gmail defaults).
+**Integrations:** e-mail via `service.MailGateway` (SMTP implementation; relay configured by `SMTP_*`, Gmail defaults).
 Object storage and geocoding will follow the same pattern: one small application-owned interface per capability.
 
 ## 3. Frontend

@@ -144,3 +144,10 @@ accounts are real plus-addresses (D-18), so every e-mail can be checked in the `
 and the `dev` package were removed, which supersedes D-18. The only account created by the application is the first
 administrator from `ADMIN_EMAIL` / `ADMIN_PASSWORD` / `ADMIN_NAME` (`AdminBootstrap`, FR-2a); every other account is
 registered through the UI. Rows seeded by earlier runs stay in the local H2 file until deleted by hand.
+
+## D-22 Package-by-layer instead of package-by-feature (2026-11-17)
+
+**Concerns:** CLAUDE.md §3 layout (package-by-feature recommended). **Decision:** author's request: the application
+is one monolith, so feature packages with their own `web/service/repository/domain` sub-packages added nesting
+without benefit. All backend classes now live in flat layer packages: `config`, `controller`, `dto`, `entity`,
+`repository`, `service`, `security`, `exception`, `event`. Behaviour, endpoints and database are unchanged.
