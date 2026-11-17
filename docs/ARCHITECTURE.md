@@ -17,7 +17,7 @@ renthub/
 ## 2. Backend
 
 **Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, springdoc-openapi, Lombok. Embedded H2 in PostgreSQL mode, one configuration
+Scheduling + `@Async`, Actuator, Flyway, Lombok. Embedded H2 in PostgreSQL mode, one configuration
 without Spring profiles (D-17). No backend tests by project policy.
 
 **Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
@@ -53,7 +53,7 @@ timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA 
 Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks
 in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
 (`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`,
-H2 console and Swagger UI). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
+H2 console). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
 (`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
 (so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
@@ -68,7 +68,7 @@ use; verification 24 h, reset 1 h. E-mails go through application events (`Verif
 (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
-`/h2-console`, Swagger `/swagger-ui.html`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
+`/h2-console`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
 variables or the root `dev.env` (git-ignored, imported by `spring.config.import`; keys listed in the README).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that

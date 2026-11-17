@@ -160,3 +160,9 @@ that, inside one transaction, creates the administrator from `ADMIN_EMAIL` / `AD
 `ADMIN_NAME` became optional (default «Адміністратор»). If the e-mail already belongs to a non-admin account, nothing
 is created and a warning is logged (no silent promotion). Registration rejects the ADMIN role, so the application
 never holds more than one administrator. Supersedes the `AdminBootstrap` service.
+
+## D-24 No Swagger / OpenAPI UI (2026-11-17)
+
+**Concerns:** CLAUDE.md §3 (springdoc-openapi, Swagger UI in dev). **Decision:** author's request. The springdoc
+dependency, its `application.yml` block and the `/swagger-ui/**` and `/api-docs/**` whitelist entries were removed.
+The API is exercised through the SPA or plain HTTP clients (which must send the `X-XSRF-TOKEN` header on POST/PUT).

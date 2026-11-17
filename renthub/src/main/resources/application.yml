@@ -1,5 +1,5 @@
 # Single configuration (no Spring profiles, see DECISIONS.md D-17): embedded H2 in PostgreSQL mode (file-based so data
-# survives restarts), H2 console, Swagger UI, e-mail through an SMTP relay configured by the SMTP_* variables (dev.env).
+# survives restarts), H2 console, e-mail through an SMTP relay configured by the SMTP_* variables (dev.env).
 spring:
   application:
     name: renthub
@@ -88,14 +88,6 @@ management:
     mail:
       # E-mail is an asynchronous, best-effort side effect; an unreachable SMTP server must not mark the app DOWN.
       enabled: false
-
-springdoc:
-  api-docs:
-    enabled: true
-    path: /api-docs
-  swagger-ui:
-    enabled: true
-    path: /swagger-ui.html
 
 logging:
   level:

@@ -41,7 +41,6 @@ Useful dev URLs:
 |---|---|
 | http://localhost:5173 | the SPA |
 | http://localhost:8080/actuator/health | health endpoint |
-| http://localhost:8080/swagger-ui.html | OpenAPI UI |
 | http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
 
 The application needs no environment variables except SMTP credentials for e-mail. Local configuration lives in
@@ -77,7 +76,7 @@ cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file)
 ## Configuration
 
 One configuration for everything, no Spring profiles (educational project, see `docs/DECISIONS.md` D-17): embedded H2
-in PostgreSQL mode, H2 console, Swagger UI, outgoing e-mail through the `SMTP_*` relay from `dev.env`.
+in PostgreSQL mode, H2 console, outgoing e-mail through the `SMTP_*` relay from `dev.env`.
 
 ## Git workflow
 

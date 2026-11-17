@@ -36,7 +36,7 @@ import org.springframework.security.web.session.SessionInformationExpiredStrateg
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-	private static final String[] DEV_TOOLS = {"/h2-console/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**"};
+	private static final String[] DEV_TOOLS = {"/h2-console/**"};
 	private static final String[] PUBLIC_AUTH_POST = {"/api/v1/auth/register", "/api/v1/auth/login",
 		"/api/v1/auth/restore", "/api/v1/auth/verify-email", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"};
 
