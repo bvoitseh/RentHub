@@ -16,7 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.util.StringUtils;
 
-/** Account of a renter, owner or admin (FR-1…FR-3c). Business rules about the account live here. */
+/** Account of a user (rents and rents out) or the admin (FR-1…FR-3c). Business rules about the account live here. */
 @Entity
 @Table(name = "users")
 @Getter
@@ -79,16 +79,17 @@ public class User {
 		this.role = role;
 		this.city = city;
 		this.createdAt = now;
+		this.ownerType = role == Role.USER ? OwnerType.PRIVATE : null;
 	}
 
 	public static String normalizeEmail(String email) {
 		return email.trim().toLowerCase(Locale.ROOT);
 	}
 
-	/** FR-1a: only owners have an owner type; a company must name itself and give an 8-digit ЄДРПОУ. */
+	/** FR-1a: users (not the admin) have an account type; a company must name itself and give an 8-digit ЄДРПОУ. */
 	public void assignOwnerType(OwnerType type, String companyName, String edrpou) {
-		if (role != Role.OWNER) {
-			throw new BusinessRuleException("user.owner_type_for_owners_only", "user.owner_type_for_owners_only");
+		if (role != Role.USER) {
+			throw new BusinessRuleException("user.owner_type_not_for_admin", "user.owner_type_not_for_admin");
 		}
 		if (type == OwnerType.COMPANY && !(StringUtils.hasText(companyName) && StringUtils.hasText(edrpou))) {
 			throw new BusinessRuleException("user.company_details_required", "user.company_details_required");

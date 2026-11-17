@@ -1,7 +1,6 @@
 package com.bohakka.renthub.service.impl;
 
 import com.bohakka.renthub.dto.ProfileUpdateRequest;
-import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.exception.ForbiddenException;
 import com.bohakka.renthub.exception.NotFoundException;
@@ -38,7 +37,7 @@ public class AccountServiceImpl implements AccountService {
 	public User updateProfile(Long userId, ProfileUpdateRequest request) {
 		User user = get(userId);
 		user.updateProfile(request.name(), request.phone(), request.city());
-		if (request.ownerType() != null || user.getRole() == Role.OWNER && user.getOwnerType() == null) {
+		if (request.ownerType() != null) {
 			user.assignOwnerType(request.ownerType(), request.companyName(), request.edrpou());
 		}
 		return user;

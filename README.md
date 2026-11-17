@@ -1,7 +1,7 @@
 # RentHub
 
 Web platform for peer-to-peer equipment rental (construction tools, photo/video gear, specialised equipment).
-Owners publish listings, renters book them for specific dates; the platform guarantees no double booking,
+Any user can publish listings and book other users' equipment for specific dates for specific dates; the platform guarantees no double booking,
 recommends equipment nearby and in season, and lets both sides rate each other.
 
 - Requirements: [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md)
@@ -65,7 +65,8 @@ still succeeds.
 
 The only preset account is the administrator: it is created at start-up from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
 `dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
-later starts skip creation, and registration rejects the ADMIN role. Owners and renters register through the UI.
+later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
+user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
 
 ## Build and checks
 

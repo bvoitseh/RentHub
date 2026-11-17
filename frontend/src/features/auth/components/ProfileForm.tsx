@@ -17,7 +17,7 @@ const p = uk.profile.edit
 
 function toPayload(values: ProfileInput): ProfilePayload {
   const base = { name: values.name, phone: values.phone, city: values.city }
-  if (!values.isOwner || values.ownerType === '') return base
+  if (!values.hasOwnerType || values.ownerType === '') return base
   const company = values.ownerType === 'COMPANY' ? { companyName: values.companyName, edrpou: values.edrpou } : {}
   return { ...base, ownerType: values.ownerType, ...company }
 }
@@ -30,7 +30,7 @@ export function ProfileForm({ user }: { user: User }) {
       name: user.name,
       phone: user.phone ?? '+380',
       city: user.city ?? '',
-      isOwner: user.role === 'OWNER',
+      hasOwnerType: user.role === 'USER',
       ownerType: user.ownerType ?? '',
       companyName: user.companyName ?? '',
       edrpou: user.edrpou ?? '',
@@ -68,7 +68,7 @@ export function ProfileForm({ user }: { user: User }) {
       <FormField label={t.fields.city} htmlFor="prof-city" error={errors.city?.message}>
         <Input id="prof-city" autoComplete="address-level2" invalid={!!errors.city} {...form.register('city')} />
       </FormField>
-      {user.role === 'OWNER' && (
+      {user.role === 'USER' && (
         <OwnerTypeFields register={form.register} errors={errors} ownerType={ownerType} idPrefix="prof" />
       )}
       <div className="flex justify-end">

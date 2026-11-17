@@ -1,4 +1,5 @@
-export type Role = 'RENTER' | 'OWNER' | 'ADMIN'
+/** USER can both rent and rent out equipment; ADMIN is the platform administrator. */
+export type Role = 'USER' | 'ADMIN'
 export type OwnerType = 'PRIVATE' | 'COMPANY'
 
 /** The caller's own account as returned by GET /auth/me. */
@@ -11,6 +12,7 @@ export interface User {
   role: Role
   city: string | null
   geoConsent: boolean
+  /** Account type; null only for the admin. */
   ownerType: OwnerType | null
   companyName: string | null
   edrpou: string | null
@@ -27,8 +29,7 @@ export interface RegisterPayload {
   phone: string
   password: string
   city: string
-  role: Exclude<Role, 'ADMIN'>
-  ownerType?: OwnerType
+  ownerType: OwnerType
   companyName?: string
   edrpou?: string
 }

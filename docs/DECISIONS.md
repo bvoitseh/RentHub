@@ -217,3 +217,15 @@ counts attempts and expires one window after the first attempt (Spring Data read
 successful login deletes the e-mail's counter. Differences from before: the window is fixed from the first attempt
 instead of sliding, and read-modify-write is not atomic, so concurrent attempts on one key may be under-counted by a
 few. Both are acceptable for brute-force protection at this scale.
+
+## D-30 One USER role: every account can rent and rent out (2026-11-17)
+
+**Concerns:** FR-1 (role chosen at registration), FR-1a, FR-2, §4 actors (`RENTER`, `OWNER`). **Decision:** author's
+request. The roles `RENTER` and `OWNER` are merged into `USER`; roles are now `USER` and `ADMIN`. Registration no
+longer asks for a role, and any active, logged-in user may both book equipment and publish listings (the spec's owner
+already had every renter permission, so no capability is lost; booking one's own equipment stays forbidden). The FR-1a
+owner type becomes the user's **account type**: every user has one (`PRIVATE` by default, `COMPANY` with company name
+and ЄДРПОУ), chosen optionally at registration and editable in the profile; the admin has none. Migration
+`V4__single_user_role.sql` converts existing rows (RENTER/OWNER → USER, missing type → PRIVATE) and replaces the role
+checks. Wherever the specification says "renter" or "owner", it now means the user's part in a particular booking or
+listing, not an account role.

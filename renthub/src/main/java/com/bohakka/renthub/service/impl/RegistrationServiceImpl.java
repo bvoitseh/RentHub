@@ -5,7 +5,6 @@ import com.bohakka.renthub.entity.EmailTokenType;
 import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.event.VerificationEmailRequested;
-import com.bohakka.renthub.exception.BusinessRuleException;
 import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.properties.RateLimitProperties;
 import com.bohakka.renthub.repository.UserRepository;
@@ -38,19 +37,13 @@ public class RegistrationServiceImpl implements RegistrationService {
 	@Transactional
 	public User register(RegisterRequest request, String clientIp) {
 		rateLimiter.consume(SCOPE, clientIp, limits.registration());
-		if (request.role() == Role.ADMIN) {
-			throw new BusinessRuleException("user.role_not_allowed", "user.role_not_allowed");
-		}
 		String email = User.normalizeEmail(request.email());
 		if (users.existsByEmail(email)) {
 			throw new ConflictException("user.email_taken", "user.email_taken");
 		}
 		User user = new User(request.name(), email, request.phone(), passwordEncoder.encode(request.password()),
-			request.role(), request.city(), clock.instant());
-		if (user.getRole() == Role.OWNER) {
-			if (request.ownerType() == null) {
-				throw new BusinessRuleException("user.owner_type_required", "user.owner_type_required");
-			}
+			Role.USER, request.city(), clock.instant());
+		if (request.ownerType() != null) {
 			user.assignOwnerType(request.ownerType(), request.companyName(), request.edrpou());
 		}
 		users.save(user);

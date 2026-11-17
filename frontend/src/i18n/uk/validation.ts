@@ -8,7 +8,7 @@ export const validation = {
   passwordsMismatch: 'Паролі не збігаються',
   nameMax: 'Ім’я має містити не більше 100 символів',
   cityMax: 'Назва міста має містити не більше 100 символів',
-  ownerTypeRequired: 'Оберіть тип власника',
+  ownerTypeRequired: 'Оберіть тип облікового запису',
   companyNameRequired: 'Вкажіть назву компанії',
   edrpou: 'Код ЄДРПОУ має складатися з 8 цифр',
 } as const

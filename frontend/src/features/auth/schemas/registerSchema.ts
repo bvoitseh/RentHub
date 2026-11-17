@@ -14,13 +14,11 @@ export const registerSchema = z
     password: z.string().min(8, { error: v.passwordMin }).max(72, { error: v.passwordMax }),
     passwordConfirm: z.string(),
     city: z.string().trim().min(1, { error: v.required }).max(100, { error: v.cityMax }),
-    role: z.enum(['RENTER', 'OWNER'], { error: v.required }),
-    ownerType: z.enum(['PRIVATE', 'COMPANY']).or(z.literal('')),
+    ownerType: z.enum(['PRIVATE', 'COMPANY']),
     companyName: z.string().trim().max(200),
     edrpou: z.string().trim(),
   })
   .refine((d) => d.password === d.passwordConfirm, { path: ['passwordConfirm'], error: v.passwordsMismatch })
-  .refine((d) => d.role !== 'OWNER' || d.ownerType !== '', { path: ['ownerType'], error: v.ownerTypeRequired })
   .refine((d) => d.ownerType !== 'COMPANY' || d.companyName.length > 0, {
     path: ['companyName'],
     error: v.companyNameRequired,
@@ -36,8 +34,7 @@ export const registerDefaults: RegisterInput = {
   password: '',
   passwordConfirm: '',
   city: 'Львів',
-  role: 'RENTER',
-  ownerType: '',
+  ownerType: 'PRIVATE',
   companyName: '',
   edrpou: '',
 }

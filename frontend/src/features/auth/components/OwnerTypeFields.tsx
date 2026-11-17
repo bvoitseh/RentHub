@@ -20,7 +20,7 @@ export interface OwnerTypeFieldsProps<T extends OwnerFieldValues> {
 
 const t = uk.auth
 
-/** FR-1a owner-type section shared by registration and profile forms; company fields appear only for COMPANY. */
+/** FR-1a account-type section shared by registration and profile forms; company fields appear only for COMPANY. */
 export function OwnerTypeFields<T extends OwnerFieldValues>({ register, errors, ownerType, idPrefix }: OwnerTypeFieldsProps<T>) {
   const message = (name: keyof OwnerFieldValues) => errors[name as Path<T>]?.message as string | undefined
   const options = [
@@ -34,7 +34,6 @@ export function OwnerTypeFields<T extends OwnerFieldValues>({ register, errors, 
         <Select
           id={`${idPrefix}-ownerType`}
           options={options}
-          placeholder="—"
           invalid={!!message('ownerType')}
           {...register('ownerType' as Path<T>)}
         />

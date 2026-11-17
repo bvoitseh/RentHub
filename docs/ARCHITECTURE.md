@@ -29,7 +29,7 @@ New features add classes to these packages; a new package is created only for a 
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA entities `User` (+ `Role`, `OwnerType`); Redis entities `EmailToken` (+ `EmailTokenType` with validity), `RateLimitAttempts`, `RateLimitBlock` |
+| `entity` | JPA entities `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type); Redis entities `EmailToken` (+ `EmailTokenType` with validity), `RateLimitAttempts`, `RateLimitBlock` |
 | `repository` | Spring Data repositories: `UserRepository` (JPA), `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository` (Redis) |
 | `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
 | `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (over the Redis rate-limit repositories), `EmailTokenServiceImpl` (over the Redis repository), `SmtpMailGateway` |
@@ -64,7 +64,8 @@ services via `RateLimiter`, keyed per IP and per e-mail, stored through Spring D
 starts with the first attempt and is read back on load) and `RateLimitBlock` (created when the limit is reached, TTL =
 window); see D-29.
 
-**Accounts (FR-1…FR-3c) in short:** `User` owns the rules (owner type / company fields, verify, deactivate, restore);
+**Accounts (FR-1…FR-3c) in short:** `User` owns the rules (single `USER` role that rents and rents out, D-30; account type / company fields, verify,
+deactivate, restore);
 `EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256, as the `@RedisHash` entity
 `EmailToken` in the Spring Data Redis `EmailTokenRepository` (indexed by `userId` and `type`, so a new token voids the
 old one); expiry is the entry's `@TimeToLive` (verification 24 h, reset 1 h), and keyspace events (`config.RedisConfig`)

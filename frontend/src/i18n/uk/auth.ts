@@ -8,12 +8,10 @@ export const auth = {
     passwordConfirm: 'Повторіть пароль',
     newPassword: 'Новий пароль',
     city: 'Місто',
-    role: 'Я хочу',
-    ownerType: 'Тип власника',
+    ownerType: 'Тип облікового запису',
     companyName: 'Назва компанії',
     edrpou: 'Код ЄДРПОУ',
   },
-  roles: { RENTER: 'орендувати обладнання', OWNER: 'здавати обладнання в оренду' },
   ownerTypes: { PRIVATE: 'Приватна особа', COMPANY: 'Компанія' },
   login: {
     title: 'Вхід',
