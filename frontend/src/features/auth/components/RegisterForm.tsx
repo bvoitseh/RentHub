@@ -50,7 +50,7 @@ export function RegisterForm() {
       {register.isError && <Alert tone="error">{problemMessage(register.error)}</Alert>}
       {field('name', t.fields.name, { autoComplete: 'name' })}
       {field('email', t.fields.email, { type: 'email', autoComplete: 'email' })}
-      <FormField label={t.fields.phone} htmlFor="reg-phone" error={errors.phone?.message} hint={t.register.phoneHint}>
+      <FormField label={t.fields.phone} htmlFor="reg-phone" error={errors.phone?.message}>
         <Controller
           control={form.control}
           name="phone"

@@ -64,7 +64,7 @@ export function ProfileForm({ user }: { user: User }) {
       >
         <Input id="prof-email" type="email" value={user.email} disabled readOnly />
       </FormField>
-      <FormField label={t.fields.phone} htmlFor="prof-phone" error={errors.phone?.message} hint={t.register.phoneHint}>
+      <FormField label={t.fields.phone} htmlFor="prof-phone" error={errors.phone?.message}>
         <Controller
           control={form.control}
           name="phone"

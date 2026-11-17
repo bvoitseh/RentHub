@@ -7,7 +7,7 @@ export interface PhoneInputProps extends Omit<InputProps, 'value' | 'onChange' |
 }
 
 /**
- * Phone field with the +38 (0XX)-XXX-XX-XX mask applied while typing, pasting and deleting. Accepts "067…", "67…"
+ * Phone field with the +380 (XX)-XXX-XX-XX mask applied while typing, pasting and deleting. Accepts "067…", "67…"
  * or "+380…"; the empty field shows the mask as its placeholder.
  */
 export function PhoneInput({ value, onChange, ...rest }: PhoneInputProps) {
