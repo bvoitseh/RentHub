@@ -175,3 +175,11 @@ request. Every service bean that another bean injects has an interface in `servi
 `SmtpMailGateway`); controllers and services depend only on the interfaces. Beans that nothing injects
 (`AccountMailListener`), `@Configuration` classes, repositories (already interfaces) and the Spring Security helpers
 in `security` stay concrete.
+
+## D-26 No `Settings` entity until a feature needs it (2026-11-17)
+
+**Concerns:** FR-10, FR-22; supersedes the Java part of the skeleton decision on the settings singleton. **Decision:**
+author's request. The unused `Settings` entity (with `SINGLETON_ID`) and `SettingsRepository` were removed; how the
+commission rate is stored and read is designed in the booking/admin features. Migration `V1__settings.sql` is
+committed and already applied, so it stays (CLAUDE.md 2.4); the `settings` table remains in the database, unmapped
+and unused.

@@ -29,8 +29,8 @@ New features add classes to these packages; a new package is created only for a 
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA entities and their enums: `User`, `EmailToken`, `Settings` (commission `feeRate` singleton), `Role`, `OwnerType`, `EmailTokenType` |
-| `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository`, `SettingsRepository` |
+| `entity` | JPA entities and their enums: `User`, `EmailToken`, `Role`, `OwnerType`, `EmailTokenType` |
+| `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository` |
 | `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
 | `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (in-memory), `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
@@ -42,7 +42,7 @@ DTOs are Java records mapped at the API boundary. JPA: lazy fetching, `open-in-v
 
 **Where business rules will live:** availability and overbooking protection (booking service with equipment row
 lock, FR-9/FR-11), booking state transitions (one enum-driven place in `entity`, FR-14), pricing/commission (service,
-reads `Settings.feeRate`, FR-10), season logic and rating in their services; entity methods guard their own invariants.
+FR-10; where the rate is stored is decided in that feature), season logic and rating in their services; entity methods guard their own invariants.
 
 **Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
 Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions
