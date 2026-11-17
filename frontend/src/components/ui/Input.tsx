@@ -1,7 +1,9 @@
-import type { InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, Ref } from 'react'
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   invalid?: boolean
+  /** React 19 passes ref as a regular prop; react-hook-form uses it to focus the field on errors. */
+  ref?: Ref<HTMLInputElement>
 }
 
 const base =

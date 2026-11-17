@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { EDRPOU_PATTERN, PHONE_PATTERN } from '@/features/auth/schemas/registerSchema'
+import { PHONE_DISPLAY_PATTERN } from '@/features/auth/phone'
+import { EDRPOU_PATTERN } from '@/features/auth/schemas/registerSchema'
 import { uk } from '@/i18n/uk'
 
 const v = uk.validation
@@ -7,7 +8,7 @@ const v = uk.validation
 export const profileSchema = z
   .object({
     name: z.string().trim().min(1, { error: v.required }).max(100, { error: v.nameMax }),
-    phone: z.string().regex(PHONE_PATTERN, { error: v.phone }),
+    phone: z.string().regex(PHONE_DISPLAY_PATTERN, { error: v.phone }),
     city: z.string().trim().min(1, { error: v.required }).max(100, { error: v.cityMax }),
     hasOwnerType: z.boolean(),
     ownerType: z.enum(['PRIVATE', 'COMPANY']).or(z.literal('')),
