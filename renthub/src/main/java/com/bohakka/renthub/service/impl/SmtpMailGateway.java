@@ -1,6 +1,7 @@
-package com.bohakka.renthub.service;
+package com.bohakka.renthub.service.impl;
 
 import com.bohakka.renthub.dto.EmailMessage;
+import com.bohakka.renthub.service.MailGateway;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.mail.autoconfigure.MailProperties;
 import org.springframework.mail.SimpleMailMessage;

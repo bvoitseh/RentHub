@@ -27,11 +27,12 @@ New features add classes to these packages; a new package is created only for a 
 |---|---|
 | `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
-| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/me`) |
+| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
 | `entity` | JPA entities and their enums: `User`, `EmailToken`, `Settings` (commission `feeRate` singleton), `Role`, `OwnerType`, `EmailTokenType` |
 | `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository`, `SettingsRepository` |
-| `service` | use cases with transactions and ownership checks: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AccountMailListener`, `RateLimiter` (NFR-14), `MailGateway` + `SmtpMailGateway` |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (in-memory), `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
@@ -116,6 +117,7 @@ work without CORS).
 
 ## 4. Patterns in use (one line each)
 
+- **Interface + implementation for services** (D-25) — controllers and services inject interfaces; Spring wires the single `service.impl` bean.
 - **Repository** (Spring Data) — persistence behind interfaces, no SQL in services.
 - **DTO + mapper at the boundary** — entities never leave the service layer.
 - **Single exception advice** — one place turns exceptions into the problem contract.

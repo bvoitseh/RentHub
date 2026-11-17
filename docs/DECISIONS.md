@@ -166,3 +166,12 @@ never holds more than one administrator. Supersedes the `AdminBootstrap` service
 **Concerns:** CLAUDE.md §3 (springdoc-openapi, Swagger UI in dev). **Decision:** author's request. The springdoc
 dependency, its `application.yml` block and the `/swagger-ui/**` and `/api-docs/**` whitelist entries were removed.
 The API is exercised through the SPA or plain HTTP clients (which must send the `X-XSRF-TOKEN` header on POST/PUT).
+
+## D-25 Service beans are injected through interfaces (2026-11-17)
+
+**Concerns:** CLAUDE.md §1.3 ("no interface with a single implementation just in case"). **Decision:** author's
+request. Every service bean that another bean injects has an interface in `service` and its implementation in
+`service.impl` (`XxxService` / `XxxServiceImpl`, `RateLimiter` / `RateLimiterImpl`, `MailGateway` /
+`SmtpMailGateway`); controllers and services depend only on the interfaces. Beans that nothing injects
+(`AccountMailListener`), `@Configuration` classes, repositories (already interfaces) and the Spring Security helpers
+in `security` stay concrete.
