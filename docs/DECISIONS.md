@@ -205,3 +205,15 @@ therefore not atomic: two simultaneous requests with the same link could both su
 and do the same thing, so this is accepted. The rate limiter stays on `StringRedisTemplate` + Lua, because counters on
 a sorted set are not entity CRUD. Spring Data runs in strict mode (JPA + Redis); each repository is assigned by its
 entity annotation (`@Entity` / `@RedisHash`).
+
+## D-29 Rate limiter through Spring Data Redis repositories (2026-11-17)
+
+**Concerns:** NFR-14; supersedes the template + Lua limiter of D-27/D-28. **Decision:** author's request, following
+the author's attempts/blocks pattern. Per key "{scope}:{value}" (scopes `login`, `registration`, `password-reset`,
+`resend-verification`; values are an IP or an e-mail), `RateLimitAttempts` (`@RedisHash("rate_limit_attempts")`)
+counts attempts and expires one window after the first attempt (Spring Data reads the remaining TTL back into the
+`@TimeToLive` field, so saving the incremented counter keeps the window); when the count reaches the limit, a
+`RateLimitBlock` (`@RedisHash("rate_limit_blocks")`) is saved with TTL = window and the counter is deleted. A
+successful login deletes the e-mail's counter. Differences from before: the window is fixed from the first attempt
+instead of sliding, and read-modify-write is not atomic, so concurrent attempts on one key may be under-counted by a
+few. Both are acceptable for brute-force protection at this scale.

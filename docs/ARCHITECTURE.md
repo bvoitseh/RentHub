@@ -25,14 +25,14 @@ New features add classes to these packages; a new package is created only for a 
 
 | Package | Contents |
 |---|---|
-| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
+| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events for index clean-up on expiry), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA entities `User` (+ `Role`, `OwnerType`); Redis entity `EmailToken` (+ `EmailTokenType` with validity) |
-| `repository` | Spring Data repositories: `UserRepository` (JPA), `EmailTokenRepository` (Redis) |
+| `entity` | JPA entities `User` (+ `Role`, `OwnerType`); Redis entities `EmailToken` (+ `EmailTokenType` with validity), `RateLimitAttempts`, `RateLimitBlock` |
+| `repository` | Spring Data repositories: `UserRepository` (JPA), `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository` (Redis) |
 | `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
-| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (Redis), `EmailTokenServiceImpl` (over the Redis repository), `SmtpMailGateway` |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (over the Redis rate-limit repositories), `EmailTokenServiceImpl` (over the Redis repository), `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
@@ -60,8 +60,9 @@ H2 console). Login is a REST endpoint: `LoginService` authenticates through `Aut
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
 a user (password reset, deactivation, later admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
 Logout is Spring Security's filter at `POST /api/v1/auth/logout` (204). Rate limits (NFR-14) are enforced in the
-services via `RateLimiter`, keyed per IP and per e-mail, stored in Redis (sorted set of hits + lock key with TTL,
-updated by one Lua script so concurrent requests cannot overshoot the limit).
+services via `RateLimiter`, keyed per IP and per e-mail, stored through Spring Data Redis repositories: `RateLimitAttempts` (counter whose TTL
+starts with the first attempt and is read back on load) and `RateLimitBlock` (created when the limit is reached, TTL =
+window); see D-29.
 
 **Accounts (FR-1…FR-3c) in short:** `User` owns the rules (owner type / company fields, verify, deactivate, restore);
 `EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256, as the `@RedisHash` entity

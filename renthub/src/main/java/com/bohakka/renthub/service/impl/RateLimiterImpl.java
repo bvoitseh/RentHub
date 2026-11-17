@@ -1,57 +1,49 @@
 package com.bohakka.renthub.service.impl;
 
+import com.bohakka.renthub.entity.RateLimitAttempts;
+import com.bohakka.renthub.entity.RateLimitBlock;
 import com.bohakka.renthub.exception.RateLimitedException;
 import com.bohakka.renthub.properties.RateLimitProperties.Policy;
+import com.bohakka.renthub.repository.RateLimitAttemptsRepository;
+import com.bohakka.renthub.repository.RateLimitBlockRepository;
 import com.bohakka.renthub.service.RateLimiter;
-import java.time.Clock;
-import java.util.List;
-import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 /**
- * Redis-backed sliding-window {@link RateLimiter}. Per key, hits are a sorted set scored by time
- * ({@code rate-limit:hits:{scope}:{value}}); reaching the limit sets a lock key ({@code rate-limit:lock:...}) that
- * expires after one window. Every key carries a TTL, so Redis cleans up idle keys itself.
+ * {@link RateLimiter} over two Redis repositories: attempt counters that expire one window after the first attempt,
+ * and blocks that expire one window after the limit was reached. Read-modify-write is not atomic, so concurrent
+ * attempts on the same key may be under-counted by a few (DECISIONS.md D-29).
  */
 @Component
 @RequiredArgsConstructor
 public class RateLimiterImpl implements RateLimiter {
 
-	/** Atomically drops hits older than the window, adds this hit and locks the key once the limit is reached. */
-	private static final RedisScript<Long> RECORD_HIT = RedisScript.of("""
-		local hits, lock = KEYS[1], KEYS[2]
-		local now, window, limit = tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])
-		redis.call('ZREMRANGEBYSCORE', hits, '-inf', now - window)
-		redis.call('ZADD', hits, now, ARGV[4])
-		if redis.call('ZCARD', hits) >= limit then
-			redis.call('SET', lock, '1', 'PX', window)
-			redis.call('DEL', hits)
-			return 1
-		end
-		redis.call('PEXPIRE', hits, window)
-		return 0
-		""", Long.class);
-
-	private final StringRedisTemplate redis;
-	private final Clock clock;
+	private final RateLimitAttemptsRepository attempts;
+	private final RateLimitBlockRepository blocks;
 
 	@Override
 	public void assertAllowed(String scope, String value) {
-		Long remainingMs = redis.getExpire(lockKey(scope, value), TimeUnit.MILLISECONDS);
-		if (remainingMs != null && remainingMs > 0) {
-			throw new RateLimitedException(Math.max(1, TimeUnit.MILLISECONDS.toMinutes(remainingMs)));
-		}
+		blocks.findById(key(scope, value)).ifPresent(block -> {
+			long seconds = block.getTtlSeconds() == null ? 60 : block.getTtlSeconds();
+			throw new RateLimitedException(Math.max(1, seconds / 60));
+		});
 	}
 
 	@Override
 	public void record(String scope, String value, Policy policy) {
-		redis.execute(RECORD_HIT, List.of(hitsKey(scope, value), lockKey(scope, value)),
-			String.valueOf(clock.millis()), String.valueOf(policy.window().toMillis()), String.valueOf(policy.limit()),
-			UUID.randomUUID().toString());
+		String key = key(scope, value);
+		long windowSeconds = policy.window().toSeconds();
+		RateLimitAttempts counter = attempts.findById(key)
+			.filter(a -> a.getTtlSeconds() != null && a.getTtlSeconds() > 0)
+			.orElseGet(() -> new RateLimitAttempts(key, windowSeconds));
+		counter.increment();
+		if (counter.getCount() >= policy.limit()) {
+			blocks.save(new RateLimitBlock(key, windowSeconds));
+			attempts.deleteById(key);
+		} else {
+			attempts.save(counter);
+		}
 	}
 
 	@Override
@@ -62,14 +54,10 @@ public class RateLimiterImpl implements RateLimiter {
 
 	@Override
 	public void clear(String scope, String value) {
-		redis.delete(List.of(hitsKey(scope, value), lockKey(scope, value)));
+		attempts.deleteById(key(scope, value));
 	}
 
-	private static String hitsKey(String scope, String value) {
-		return "rate-limit:hits:" + scope + ":" + value;
-	}
-
-	private static String lockKey(String scope, String value) {
-		return "rate-limit:lock:" + scope + ":" + value;
+	private static String key(String scope, String value) {
+		return scope + ":" + value;
 	}
 }
