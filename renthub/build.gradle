@@ -26,12 +26,10 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-mail'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator'
 	implementation 'org.springframework.boot:spring-boot-starter-flyway'
-	implementation 'org.flywaydb:flyway-database-postgresql'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
 	runtimeOnly 'com.h2database:h2'
 	runtimeOnly 'org.springframework.boot:spring-boot-h2console'
-	runtimeOnly 'org.postgresql:postgresql'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -43,7 +41,3 @@ tasks.named('test') {
 	enabled = false
 }
 
-// `./gradlew bootRun` starts the dev profile (H2 + seed data) unless -Pprofile=... is given.
-tasks.named('bootRun') {
-	args = ["--spring.profiles.active=${findProperty('profile') ?: 'dev'}"]
-}

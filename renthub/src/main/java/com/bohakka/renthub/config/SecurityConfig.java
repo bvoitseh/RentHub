@@ -1,31 +1,45 @@
 package com.bohakka.renthub.config;
 
+import com.bohakka.renthub.security.SecurityProblemHandler;
+import com.bohakka.renthub.security.SpaCsrfTokenRequestHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.env.Environment;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.session.SessionRegistry;
+import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.session.SessionAuthenticationException;
+import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.context.SecurityContextRepository;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.session.HttpSessionEventPublisher;
+import org.springframework.security.web.session.SessionInformationExpiredStrategy;
 
 /**
- * Security model (NFR-4): server-side session cookie (HttpOnly, SameSite=Lax, Secure in prod),
- * CSRF double-submit cookie for the same-origin SPA, BCrypt passwords, role checks via method security.
- * Authentication endpoints are added by the accounts feature; the skeleton only exposes public infrastructure paths.
+ * Security model (NFR-4): server-side session cookie (HttpOnly, SameSite=Lax), CSRF double-submit
+ * cookie for the same-origin SPA, BCrypt passwords, role checks via method security. Login is a REST endpoint
+ * (see LoginService); logout is Spring Security's filter. Sessions are tracked in an in-memory registry so a
+ * password reset, deactivation or admin block can end every session of a user.
  */
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-	private static final String[] DEV_TOOLS = {"/h2-console/**", "/swagger-ui/**", "/swagger-ui.html", "/api-docs/**"};
+	private static final String[] DEV_TOOLS = {"/h2-console/**"};
+	private static final String[] PUBLIC_AUTH_POST = {"/api/v1/auth/register", "/api/v1/auth/login",
+		"/api/v1/auth/restore", "/api/v1/auth/verify-email", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"};
 
-	private final Environment environment;
 	private final SecurityProblemHandler problemHandler;
 
 	@Bean
@@ -34,34 +48,55 @@ public class SecurityConfig {
 	}
 
 	@Bean
-	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-		boolean dev = environment.matchesProfiles("dev");
+	public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+		return configuration.getAuthenticationManager();
+	}
+
+	@Bean
+	public SecurityContextRepository securityContextRepository() {
+		return new HttpSessionSecurityContextRepository();
+	}
+
+	@Bean
+	public SessionRegistry sessionRegistry() {
+		return new SessionRegistryImpl();
+	}
+
+	@Bean
+	public HttpSessionEventPublisher httpSessionEventPublisher() {
+		return new HttpSessionEventPublisher();
+	}
+
+	@Bean
+	public SecurityFilterChain securityFilterChain(HttpSecurity http, SecurityContextRepository contextRepository,
+			SessionRegistry sessionRegistry) throws Exception {
+		SessionInformationExpiredStrategy expired = event -> problemHandler.commence(event.getRequest(),
+			event.getResponse(), new SessionAuthenticationException("Session expired"));
 		http
 			.csrf(csrf -> {
 				csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
 					.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler());
-				if (dev) {
-					csrf.ignoringRequestMatchers("/h2-console/**");
-				}
+				csrf.ignoringRequestMatchers("/h2-console/**");
 			})
-			.headers(headers -> {
-				if (dev) {
-					headers.frameOptions(frame -> frame.sameOrigin());
-				}
+			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+			.securityContext(context -> context.securityContextRepository(contextRepository))
+			.sessionManagement(session -> {
+				session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
+				session.maximumSessions(-1).sessionRegistry(sessionRegistry).expiredSessionStrategy(expired);
 			})
-			.sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
 			.httpBasic(AbstractHttpConfigurer::disable)
 			.formLogin(AbstractHttpConfigurer::disable)
-			.logout(AbstractHttpConfigurer::disable)
 			.requestCache(AbstractHttpConfigurer::disable)
+			.logout(logout -> logout
+				.logoutUrl("/api/v1/auth/logout")
+				.logoutSuccessHandler((request, response, auth) -> response.setStatus(HttpStatus.NO_CONTENT.value())))
 			.exceptionHandling(handling -> handling
 				.authenticationEntryPoint(problemHandler)
 				.accessDeniedHandler(problemHandler))
 			.authorizeHttpRequests(auth -> {
 				auth.requestMatchers("/actuator/health").permitAll();
-				if (dev) {
-					auth.requestMatchers(DEV_TOOLS).permitAll();
-				}
+				auth.requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POST).permitAll();
+				auth.requestMatchers(DEV_TOOLS).permitAll();
 				auth.anyRequest().authenticated();
 			});
 		return http.build();

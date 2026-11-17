@@ -1,7 +1,7 @@
 # RentHub
 
 Web platform for peer-to-peer equipment rental (construction tools, photo/video gear, specialised equipment).
-Owners publish listings, renters book them for specific dates; the platform guarantees no double booking,
+Any user can publish listings and book other users' equipment for specific dates for specific dates; the platform guarantees no double booking,
 recommends equipment nearby and in season, and lets both sides rate each other.
 
 - Requirements: [`docs/SPECIFICATION.md`](docs/SPECIFICATION.md)
@@ -12,22 +12,23 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 
 | Part | Technology |
 |---|---|
-| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, H2 (dev) / PostgreSQL (prod), Gradle |
+| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode), Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: PostgreSQL, MinIO (S3), Mailpit (SMTP catcher) |
+| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens), MinIO (S3) |
 
 ## Prerequisites
 
 - JDK 25, Node.js 22+ (24 recommended), npm 10+
-- Docker Desktop (only for MinIO / Mailpit / PostgreSQL)
+- Docker Desktop (Redis is required by the backend; MinIO for catalogue photos)
+- An SMTP account for outgoing e-mail (Gmail with an app password works)
 
-## Run locally (dev profile)
+## Run locally
 
 ```bash
-# 1. optional infrastructure (Mailpit UI: http://localhost:8025, MinIO console: http://localhost:9001)
-docker compose up -d minio mailpit            # add "postgres" only if you want to run the prod profile locally
+# 1. infrastructure: Redis is required (rate limits, e-mail link tokens); MinIO console: http://localhost:9001
+docker compose up -d redis minio
 
-# 2. backend — H2 (file ./renthub/data/renthub), Flyway migrations, dev tools
+# 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
 
 # 3. frontend — Vite dev server with /api proxy to :8080
@@ -40,11 +41,32 @@ Useful dev URLs:
 |---|---|
 | http://localhost:5173 | the SPA |
 | http://localhost:8080/actuator/health | health endpoint |
-| http://localhost:8080/swagger-ui.html | OpenAPI UI (dev only) |
 | http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
 
-The dev profile needs no environment variables. Copy `.env.example` to `.env` to override anything
-(admin bootstrap, SMTP, S3, …); the file lists every variable the application reads.
+The application needs no environment variables except SMTP credentials for e-mail. Local configuration lives in
+`dev.env` at the repository root (git-ignored, the single place for secrets). Spring Boot imports it itself
+(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; the syntax is Java `.properties`
+(`KEY=value`, no inline comments; comment a key out to keep the default), and real environment variables take
+precedence. Keys it may contain:
+
+| Group | Keys |
+|---|---|
+| server / app | `SERVER_PORT`, `APP_BASE_URL` |
+| Redis | `REDIS_HOST`, `REDIS_PORT` (defaults `localhost`, `6379`) |
+| SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
+| admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
+| rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
+| object storage (later) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` |
+| geocoding (later) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` |
+
+Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
+defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
+still succeeds.
+
+The only preset account is the administrator: it is created at start-up from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
+`dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
+later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
+user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
 
 ## Build and checks
 
@@ -53,11 +75,10 @@ cd renthub  && ./gradlew build                # compiles and packages the backen
 cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file) + type-check + production bundle
 ```
 
-## Profiles
+## Configuration
 
-- `dev` (default): embedded H2 in PostgreSQL mode, H2 console, Swagger UI, Mailpit on `localhost:1025`.
-- `prod`: PostgreSQL via `DB_URL`/`DB_USERNAME`/`DB_PASSWORD`, secure session cookie, no dev tools.
-  Run with `./gradlew bootRun -Pprofile=prod` or `java -jar build/libs/renthub-*.jar --spring.profiles.active=prod`.
+One configuration for everything, no Spring profiles (educational project, see `docs/DECISIONS.md` D-17): embedded H2
+in PostgreSQL mode, H2 console, outgoing e-mail through the `SMTP_*` relay from `dev.env`.
 
 ## Git workflow
 

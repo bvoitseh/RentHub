@@ -1,20 +1,17 @@
-# Local infrastructure for development: PostgreSQL (optional, the dev profile uses H2 by default),
-# MinIO as S3-compatible object storage and Mailpit as an SMTP catcher with a web UI.
-# Usage: docker compose up -d postgres minio mailpit
+# Local infrastructure: Redis (rate limits and e-mail link tokens, required by the backend) and MinIO as
+# S3-compatible object storage (catalogue photos). The database is embedded H2 and e-mail goes to a real SMTP relay.
+# Usage: docker compose up -d redis minio
 services:
-  postgres:
-    image: postgres:17-alpine
-    container_name: renthub-postgres
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-renthub}
-      POSTGRES_USER: ${POSTGRES_USER:-renthub}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-renthub}
+  redis:
+    image: redis:8.2.11-alpine
+    container_name: renthub-redis
+    command: redis-server --save 60 1 --appendonly no
     ports:
-      - "5432:5432"
+      - "6379:6379"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - redis-data:/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-renthub} -d ${POSTGRES_DB:-renthub}"]
+      test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,16 +52,6 @@ services:
       mc anonymous set download local/$$S3_BUCKET
       "
 
-  mailpit:
-    image: axllent/mailpit:v1.27
-    container_name: renthub-mailpit
-    ports:
-      - "1025:1025"   # SMTP
-      - "8025:8025"   # web UI
-    environment:
-      MP_SMTP_AUTH_ACCEPT_ANY: 1
-      MP_SMTP_AUTH_ALLOW_INSECURE: 1
-
 volumes:
-  postgres-data:
+  redis-data:
   minio-data:

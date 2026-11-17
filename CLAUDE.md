@@ -39,6 +39,11 @@ Instructions for the agent implementing **RentHub**, a web platform for peer-to-
    - **Never add yourself (Claude / Claude Code / any AI) as an author or contributor — in any way.** No `Co-Authored-By:` trailers, no "Generated with Claude Code" lines or links in commit messages, PR titles/descriptions or code comments; no AI mentions in `README`, `CONTRIBUTORS`, `AUTHORS` or similar files. Do not change the git `user.name`/`user.email` configured by the author; commits must appear solely under the author's identity. To prevent automatic attribution, keep `.claude/settings.json` with `{"attribution": {"commit": "", "pr": ""}}` committed in the repository.
    - Never commit secrets, `.env` files, build output (`target/`, `node_modules/`, `dist/`); maintain a proper `.gitignore`. Never rewrite published history (no force-push) without the author's request.
 
+5. **Free and open-source tools only — nothing billable, ever.** Every library, framework, Docker image, CLI, service and API used anywhere in the project (code, build, dev environment, docs, deployment instructions) must be free of charge and open source (OSI-approved licence such as MIT, Apache-2.0, BSD, EPL, LGPL/GPL). Concretely:
+   - No paid plans, trials, credit-card sign-ups, usage-metered APIs, SaaS tiers that can start billing, or "free tier" services that require payment details.
+   - External services may only be used when a free, self-hostable or no-account alternative is the default (e.g. Mailpit / MinIO / PostgreSQL in Docker, OpenStreetMap Nominatim and tiles within their usage policies). Any third-party service is reached only through configuration (environment variables), never hard-wired, so the author can pick a provider later.
+   - Before proposing any new dependency, image or service, state its licence and confirm it is free in the plan. If no free option exists for something, say so and leave the decision to the author — do not pick a paid one.
+
 ---
 
 ## 2. Working process
