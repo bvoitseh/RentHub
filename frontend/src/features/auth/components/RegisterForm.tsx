@@ -9,7 +9,12 @@ import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { OwnerTypeFields } from '@/features/auth/components/OwnerTypeFields'
 import { useRegister } from '@/features/auth/hooks/useAuthMutations'
-import { registerDefaults, registerSchema, type RegisterInput } from '@/features/auth/schemas/registerSchema'
+import {
+  PHONE_INPUT_PROPS,
+  registerDefaults,
+  registerSchema,
+  type RegisterInput,
+} from '@/features/auth/schemas/registerSchema'
 import type { RegisterPayload } from '@/features/auth/types'
 import { uk } from '@/i18n/uk'
 
@@ -48,7 +53,7 @@ export function RegisterForm() {
       {register.isError && <Alert tone="error">{problemMessage(register.error)}</Alert>}
       {field('name', t.fields.name, { autoComplete: 'name' })}
       {field('email', t.fields.email, { type: 'email', autoComplete: 'email' })}
-      {field('phone', t.fields.phone, { type: 'tel', autoComplete: 'tel' }, t.register.phoneHint)}
+      {field('phone', t.fields.phone, PHONE_INPUT_PROPS, t.register.phoneHint)}
       {field('city', t.fields.city, { autoComplete: 'address-level2' })}
       {field('password', t.fields.password, { type: 'password', autoComplete: 'new-password' }, t.register.passwordHint)}
       {field('passwordConfirm', t.fields.passwordConfirm, { type: 'password', autoComplete: 'new-password' })}

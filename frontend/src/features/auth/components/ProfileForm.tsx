@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/Input'
 import { OwnerTypeFields } from '@/features/auth/components/OwnerTypeFields'
 import { useUpdateProfile } from '@/features/auth/hooks/useAccountMutations'
 import { profileSchema, type ProfileInput } from '@/features/auth/schemas/profileSchema'
+import { PHONE_INPUT_PROPS } from '@/features/auth/schemas/registerSchema'
 import type { ProfilePayload, User } from '@/features/auth/types'
 import { uk } from '@/i18n/uk'
 
@@ -63,7 +64,7 @@ export function ProfileForm({ user }: { user: User }) {
         <Input id="prof-email" type="email" value={user.email} disabled readOnly />
       </FormField>
       <FormField label={t.fields.phone} htmlFor="prof-phone" error={errors.phone?.message} hint={t.register.phoneHint}>
-        <Input id="prof-phone" type="tel" autoComplete="tel" invalid={!!errors.phone} {...form.register('phone')} />
+        <Input id="prof-phone" {...PHONE_INPUT_PROPS} invalid={!!errors.phone} {...form.register('phone')} />
       </FormField>
       <FormField label={t.fields.city} htmlFor="prof-city" error={errors.city?.message}>
         <Input id="prof-city" autoComplete="address-level2" invalid={!!errors.city} {...form.register('city')} />
