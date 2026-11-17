@@ -10,14 +10,14 @@ renthub/
 ├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml   minio (+ bucket init)
+├─ docker-compose.yml   redis · minio (+ bucket init)
 └─ dev.env              local environment (git-ignored); the keys are listed in the README
 ```
 
 ## 2. Backend
 
 **Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, Lombok. Embedded H2 in PostgreSQL mode, one configuration
+Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, Lombok. Embedded H2 in PostgreSQL mode, one configuration
 without Spring profiles (D-17). No backend tests by project policy.
 
 **Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
@@ -29,10 +29,10 @@ New features add classes to these packages; a new package is created only for a 
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA entities and their enums: `User`, `EmailToken`, `Role`, `OwnerType`, `EmailTokenType` |
-| `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository` |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
-| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (in-memory), `SmtpMailGateway` |
+| `entity` | JPA entities and their enums: `User`, `Role`, `OwnerType` |
+| `repository` | Spring Data repositories: `UserRepository` |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService` (+ `EmailTokenType` with validity), `RateLimiter` (NFR-14), `MailGateway`; plus `AccountMailListener` (event listener, no interface) |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl` (Redis), `EmailTokenServiceImpl` (Redis), `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
@@ -60,11 +60,13 @@ H2 console). Login is a REST endpoint: `LoginService` authenticates through `Aut
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
 a user (password reset, deactivation, later admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
 Logout is Spring Security's filter at `POST /api/v1/auth/logout` (204). Rate limits (NFR-14) are enforced in the
-services via `RateLimiter`, keyed per IP and per e-mail.
+services via `RateLimiter`, keyed per IP and per e-mail, stored in Redis (sorted set of hits + lock key with TTL,
+updated by one Lua script so concurrent requests cannot overshoot the limit).
 
 **Accounts (FR-1…FR-3c) in short:** `User` owns the rules (owner type / company fields, verify, deactivate, restore);
-`EmailTokenService` issues 256-bit random tokens, stores only SHA-256, one usable token per user and type, single
-use; verification 24 h, reset 1 h. E-mails go through application events (`VerificationEmailRequested`,
+`EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256 in Redis
+(`email-token:{TYPE}:{hash}` → user id, plus a per-user pointer so a new token voids the old one); expiry is the Redis
+TTL (verification 24 h, reset 1 h) and single use is the atomic `GETDEL` on consumption. E-mails go through application events (`VerificationEmailRequested`,
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
 (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 
@@ -78,7 +80,7 @@ runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validate
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.
 
-**Scheduled jobs:** `RateLimiter.evictIdleBuckets` (every 10 min). Booking completion/expiry and review publishing
+**Scheduled jobs:** none yet (Redis TTLs replace clean-up jobs). Booking completion/expiry and review publishing
 come with their features.
 
 **Integrations:** e-mail via `service.MailGateway` (SMTP implementation; relay configured by `SMTP_*`, Gmail defaults).

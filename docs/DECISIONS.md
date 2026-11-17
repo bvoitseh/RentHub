@@ -183,3 +183,13 @@ author's request. The unused `Settings` entity (with `SINGLETON_ID`) and `Settin
 commission rate is stored and read is designed in the booking/admin features. Migration `V1__settings.sql` is
 committed and already applied, so it stays (CLAUDE.md 2.4); the `settings` table remains in the database, unmapped
 and unused.
+
+## D-27 Redis for rate limits and e-mail link tokens (2026-11-17)
+
+**Concerns:** NFR-14 (rate limits), FR-1 / FR-3a / NFR-5 (single-use e-mail links). **Decision:** author's request.
+Both moved to Redis (`spring-boot-starter-data-redis`, Apache-2.0, with the Lettuce client, MIT; image
+`redis:8.2.11-alpine`, used under its OSI-approved AGPLv3 option). Rate-limit state survives restarts and expires by
+TTL instead of a scheduled job; e-mail tokens are Redis keys with TTL, consumed with `GETDEL`, so the `email_tokens`
+table and its entity/repository were removed (migration `V3__drop_email_tokens.sql`). Redis is now required: without
+it the health check reports DOWN and login/registration/reset answer 500. Consuming a token happens before the
+database transaction commits; if that transaction fails, the link is spent and the user requests a new one.

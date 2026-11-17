@@ -1,4 +1,4 @@
-package com.bohakka.renthub.entity;
+package com.bohakka.renthub.service;
 
 import java.time.Duration;
 

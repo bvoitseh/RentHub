@@ -1,7 +1,7 @@
 package com.bohakka.renthub.service.impl;
 
 import com.bohakka.renthub.dto.RegisterRequest;
-import com.bohakka.renthub.entity.EmailTokenType;
+import com.bohakka.renthub.service.EmailTokenType;
 import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.event.VerificationEmailRequested;

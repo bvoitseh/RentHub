@@ -1,7 +1,6 @@
 package com.bohakka.renthub.service.impl;
 
-import com.bohakka.renthub.entity.EmailToken;
-import com.bohakka.renthub.entity.EmailTokenType;
+import com.bohakka.renthub.service.EmailTokenType;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.event.PasswordResetEmailRequested;
 import com.bohakka.renthub.properties.RateLimitProperties;
@@ -47,8 +46,7 @@ public class PasswordResetServiceImpl implements PasswordResetService {
 	@Override
 	@Transactional
 	public void reset(String rawToken, String newPassword) {
-		EmailToken token = tokens.consume(rawToken, EmailTokenType.RESET_PASSWORD);
-		User user = token.getUser();
+		User user = tokens.consume(rawToken, EmailTokenType.RESET_PASSWORD);
 		user.changePassword(passwordEncoder.encode(newPassword));
 		sessionTerminator.expireAllSessions(user.getId());
 	}

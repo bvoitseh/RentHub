@@ -4,57 +4,54 @@ import com.bohakka.renthub.exception.RateLimitedException;
 import com.bohakka.renthub.properties.RateLimitProperties.Policy;
 import com.bohakka.renthub.service.RateLimiter;
 import java.time.Clock;
-import java.time.Duration;
-import java.time.Instant;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
-import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
-/** In-memory sliding-window {@link RateLimiter}; a single instance is enough for this deployment. */
+/**
+ * Redis-backed sliding-window {@link RateLimiter}. Per key, hits are a sorted set scored by time
+ * ({@code rate-limit:hits:{scope}:{value}}); reaching the limit sets a lock key ({@code rate-limit:lock:...}) that
+ * expires after one window. Every key carries a TTL, so Redis cleans up idle keys itself.
+ */
 @Component
 @RequiredArgsConstructor
 public class RateLimiterImpl implements RateLimiter {
 
-	private static final Duration IDLE_EVICTION = Duration.ofHours(2);
+	/** Atomically drops hits older than the window, adds this hit and locks the key once the limit is reached. */
+	private static final RedisScript<Long> RECORD_HIT = RedisScript.of("""
+		local hits, lock = KEYS[1], KEYS[2]
+		local now, window, limit = tonumber(ARGV[1]), tonumber(ARGV[2]), tonumber(ARGV[3])
+		redis.call('ZREMRANGEBYSCORE', hits, '-inf', now - window)
+		redis.call('ZADD', hits, now, ARGV[4])
+		if redis.call('ZCARD', hits) >= limit then
+			redis.call('SET', lock, '1', 'PX', window)
+			redis.call('DEL', hits)
+			return 1
+		end
+		redis.call('PEXPIRE', hits, window)
+		return 0
+		""", Long.class);
 
+	private final StringRedisTemplate redis;
 	private final Clock clock;
-	private final Map<String, Bucket> buckets = new ConcurrentHashMap<>();
 
 	@Override
 	public void assertAllowed(String scope, String value) {
-		Bucket bucket = buckets.get(key(scope, value));
-		if (bucket == null) {
-			return;
-		}
-		Instant now = clock.instant();
-		synchronized (bucket) {
-			if (bucket.lockedUntil != null && bucket.lockedUntil.isAfter(now)) {
-				long minutes = Math.max(1, Duration.between(now, bucket.lockedUntil).toMinutes());
-				throw new RateLimitedException(minutes);
-			}
+		Long remainingMs = redis.getExpire(lockKey(scope, value), TimeUnit.MILLISECONDS);
+		if (remainingMs != null && remainingMs > 0) {
+			throw new RateLimitedException(Math.max(1, TimeUnit.MILLISECONDS.toMinutes(remainingMs)));
 		}
 	}
 
 	@Override
 	public void record(String scope, String value, Policy policy) {
-		Instant now = clock.instant();
-		Bucket bucket = buckets.computeIfAbsent(key(scope, value), k -> new Bucket());
-		synchronized (bucket) {
-			bucket.lastHit = now;
-			Instant windowStart = now.minus(policy.window());
-			while (!bucket.hits.isEmpty() && bucket.hits.peekFirst().isBefore(windowStart)) {
-				bucket.hits.pollFirst();
-			}
-			bucket.hits.addLast(now);
-			if (bucket.hits.size() >= policy.limit()) {
-				bucket.lockedUntil = now.plus(policy.window());
-				bucket.hits.clear();
-			}
-		}
+		redis.execute(RECORD_HIT, List.of(hitsKey(scope, value), lockKey(scope, value)),
+			String.valueOf(clock.millis()), String.valueOf(policy.window().toMillis()), String.valueOf(policy.limit()),
+			UUID.randomUUID().toString());
 	}
 
 	@Override
@@ -65,28 +62,14 @@ public class RateLimiterImpl implements RateLimiter {
 
 	@Override
 	public void clear(String scope, String value) {
-		buckets.remove(key(scope, value));
+		redis.delete(List.of(hitsKey(scope, value), lockKey(scope, value)));
 	}
 
-	@Scheduled(fixedDelay = 600_000)
-	void evictIdleBuckets() {
-		Instant threshold = clock.instant().minus(IDLE_EVICTION);
-		buckets.entrySet().removeIf(entry -> {
-			Bucket bucket = entry.getValue();
-			synchronized (bucket) {
-				boolean lockOver = bucket.lockedUntil == null || bucket.lockedUntil.isBefore(threshold);
-				return lockOver && bucket.lastHit.isBefore(threshold);
-			}
-		});
+	private static String hitsKey(String scope, String value) {
+		return "rate-limit:hits:" + scope + ":" + value;
 	}
 
-	private static String key(String scope, String value) {
-		return scope + ":" + value;
-	}
-
-	private static final class Bucket {
-		private final Deque<Instant> hits = new ArrayDeque<>();
-		private Instant lockedUntil;
-		private Instant lastHit = Instant.EPOCH;
+	private static String lockKey(String scope, String value) {
+		return "rate-limit:lock:" + scope + ":" + value;
 	}
 }

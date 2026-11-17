@@ -1,7 +1,6 @@
 package com.bohakka.renthub.service.impl;
 
-import com.bohakka.renthub.entity.EmailToken;
-import com.bohakka.renthub.entity.EmailTokenType;
+import com.bohakka.renthub.service.EmailTokenType;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.event.VerificationEmailRequested;
 import com.bohakka.renthub.exception.ConflictException;
@@ -32,8 +31,7 @@ public class EmailVerificationServiceImpl implements EmailVerificationService {
 	@Override
 	@Transactional
 	public void verify(String rawToken) {
-		EmailToken token = tokens.consume(rawToken, EmailTokenType.VERIFY_EMAIL);
-		token.getUser().markEmailVerified();
+		tokens.consume(rawToken, EmailTokenType.VERIFY_EMAIL).markEmailVerified();
 	}
 
 	@Override

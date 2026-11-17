@@ -14,19 +14,19 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 |---|---|
 | Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode), Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: MinIO (S3) |
+| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens), MinIO (S3) |
 
 ## Prerequisites
 
 - JDK 25, Node.js 22+ (24 recommended), npm 10+
-- Docker Desktop (only for MinIO, catalogue photos)
+- Docker Desktop (Redis is required by the backend; MinIO for catalogue photos)
 - An SMTP account for outgoing e-mail (Gmail with an app password works)
 
 ## Run locally
 
 ```bash
-# 1. optional infrastructure (MinIO console: http://localhost:9001)
-docker compose up -d minio
+# 1. infrastructure: Redis is required (rate limits, e-mail link tokens); MinIO console: http://localhost:9001
+docker compose up -d redis minio
 
 # 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
@@ -52,6 +52,7 @@ precedence. Keys it may contain:
 | Group | Keys |
 |---|---|
 | server / app | `SERVER_PORT`, `APP_BASE_URL` |
+| Redis | `REDIS_HOST`, `REDIS_PORT` (defaults `localhost`, `6379`) |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
