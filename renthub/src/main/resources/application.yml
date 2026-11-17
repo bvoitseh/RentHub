@@ -104,11 +104,11 @@ logging:
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
   time-zone: Europe/Kyiv
-  # FR-2a: first administrator, created at start-up only when no ADMIN exists and all three are set.
+  # FR-2a: the single preset administrator (config.AdminAccountConfig), created at start-up when no ADMIN exists.
   admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
-    name: ${ADMIN_NAME:}
+    name: ${ADMIN_NAME:Адміністратор}
   # NFR-14: "limit" attempts per "window"; reaching the limit locks the key for another window.
   rate-limit:
     login:

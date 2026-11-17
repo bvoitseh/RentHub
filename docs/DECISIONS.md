@@ -152,3 +152,11 @@ is one monolith, so feature packages with their own `web/service/repository/doma
 without benefit. All backend classes now live in flat layer packages: `config` (only `@Configuration` classes),
 `properties` (`@ConfigurationProperties` records), `controller`, `dto`, `entity`, `repository`, `service`, `security`,
 `exception`, `event`. Behaviour, endpoints and database are unchanged.
+
+## D-23 Exactly one preset administrator, created by a `@Configuration` bean (2026-11-17)
+
+**Concerns:** FR-2a. **Decision:** author's request. `config.AdminAccountConfig` declares an `ApplicationRunner` bean
+that, inside one transaction, creates the administrator from `ADMIN_EMAIL` / `ADMIN_PASSWORD` when no ADMIN exists.
+`ADMIN_NAME` became optional (default «Адміністратор»). If the e-mail already belongs to a non-admin account, nothing
+is created and a warning is logged (no silent promotion). Registration rejects the ADMIN role, so the application
+never holds more than one administrator. Supersedes the `AdminBootstrap` service.

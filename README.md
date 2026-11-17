@@ -54,7 +54,7 @@ precedence. Keys it may contain:
 |---|---|
 | server / app | `SERVER_PORT`, `APP_BASE_URL` |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
-| admin bootstrap (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` |
+| admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
 | object storage (later) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` |
 | geocoding (later) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` |
@@ -63,9 +63,9 @@ Verification and password-reset e-mails go out through the SMTP relay configured
 defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
 still succeeds.
 
-There are no seeded accounts. The first administrator is created at start-up from `ADMIN_EMAIL`, `ADMIN_PASSWORD`
-and `ADMIN_NAME` in `dev.env` when all three are set and no administrator exists yet; owners and renters register
-through the UI.
+The only preset account is the administrator: it is created at start-up from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
+`dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
+later starts skip creation, and registration rejects the ADMIN role. Owners and renters register through the UI.
 
 ## Build and checks
 

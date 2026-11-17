@@ -25,13 +25,13 @@ New features add classes to these packages; a new package is created only for a 
 
 | Package | Contents |
 |---|---|
-| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig` |
+| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a) |
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/me`) |
 | `dto` | request/response records (`RegisterRequest`, `LoginRequest`, `UserResponse`, …), shared `Validation` constants, `EmailMessage` |
 | `entity` | JPA entities and their enums: `User`, `EmailToken`, `Settings` (commission `feeRate` singleton), `Role`, `OwnerType`, `EmailTokenType` |
 | `repository` | Spring Data repositories: `UserRepository`, `EmailTokenRepository`, `SettingsRepository` |
-| `service` | use cases with transactions and ownership checks: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AdminBootstrap` (FR-2a), `AccountMailListener`, `RateLimiter` (NFR-14), `MailGateway` + `SmtpMailGateway` |
+| `service` | use cases with transactions and ownership checks: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `AccountMailListener`, `RateLimiter` (NFR-14), `MailGateway` + `SmtpMailGateway` |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events that trigger e-mails: `VerificationEmailRequested`, `PasswordResetEmailRequested` |
@@ -65,7 +65,7 @@ services via `RateLimiter`, keyed per IP and per e-mail.
 `EmailTokenService` issues 256-bit random tokens, stores only SHA-256, one usable token per user and type, single
 use; verification 24 h, reset 1 h. E-mails go through application events (`VerificationEmailRequested`,
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
-(after commit, off the request thread, failures logged). `AdminBootstrap` (FR-2a) runs at start-up.
+(after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
 `/h2-console`, Swagger `/swagger-ui.html`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
