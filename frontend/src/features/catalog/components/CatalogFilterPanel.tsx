@@ -1,8 +1,10 @@
+import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { useAutoApply } from '@/features/catalog/hooks/useAutoApply'
 import { useCategories } from '@/features/catalog/hooks/useCatalogQueries'
 import type { CatalogFilters } from '@/features/catalog/types'
 import { uk } from '@/i18n/uk'
@@ -17,7 +19,10 @@ export interface CatalogFilterPanelProps {
 
 const FIELDS = ['categoryId', 'priceMin', 'priceMax', 'dateFrom', 'dateTo', 'units', 'ownerType'] as const
 
-/** FR-7 filters; the form is re-created from the URL whenever it changes, and applied as a whole. */
+/**
+ * FR-7 filters, applied automatically as they change. Half-filled pairs (one date only, min price above max) keep the
+ * previous values until they are valid. The form is uncontrolled and re-created only on reset, so typing keeps focus.
+ */
 export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterPanelProps) {
   const { data: categories = [] } = useCategories()
   const today = new Date().toLocaleDateString('sv-SE') // local YYYY-MM-DD
@@ -28,8 +33,18 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
     for (const name of FIELDS) Object.assign(changes, { [name]: String(data.get(name) ?? '') || undefined })
     changes.pickup = data.get('pickup') ? 'true' : undefined
     changes.delivery = data.get('delivery') ? 'true' : undefined
+    if (Boolean(changes.dateFrom) !== Boolean(changes.dateTo)) {
+      delete changes.dateFrom
+      delete changes.dateTo
+    }
+    if (changes.priceMin && changes.priceMax && Number(changes.priceMin) > Number(changes.priceMax)) {
+      delete changes.priceMin
+      delete changes.priceMax
+    }
     onApply(changes)
   }
+  const onChange = useAutoApply(submit)
+  const [version, setVersion] = useState(0)
 
   const number = (name: 'priceMin' | 'priceMax' | 'units', label: string, min: number) => (
     <FormField label={label} htmlFor={`f-${name}`}>
@@ -39,8 +54,9 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
 
   return (
     <form
-      key={JSON.stringify(filters)}
+      key={version}
       className="flex flex-col gap-1"
+      onChange={onChange}
       onSubmit={(event) => {
         event.preventDefault()
         submit(event.currentTarget)
@@ -85,8 +101,13 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
         <Checkbox id="f-pickup" name="pickup" label={t.pickup} defaultChecked={filters.pickup === 'true'} />
         <Checkbox id="f-delivery" name="delivery" label={t.delivery} defaultChecked={filters.delivery === 'true'} />
       </div>
-      <Button type="submit">{t.apply}</Button>
-      <Button variant="ghost" onClick={onReset}>
+      <Button
+        variant="secondary"
+        onClick={() => {
+          onReset()
+          setVersion((v) => v + 1)
+        }}
+      >
         {t.reset}
       </Button>
     </form>
