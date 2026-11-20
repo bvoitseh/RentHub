@@ -1,6 +1,7 @@
 import { Link } from 'react-router'
 import { Alert } from '@/components/ui/Alert'
 import { MapView } from '@/components/map/MapView'
+import { BookingPanel } from '@/features/booking/components/BookingPanel'
 import { EquipmentFacts } from '@/features/catalog/components/EquipmentFacts'
 import { EquipmentGallery } from '@/features/catalog/components/EquipmentGallery'
 import { OwnerPanel } from '@/features/catalog/components/OwnerPanel'
@@ -10,7 +11,7 @@ import { uk } from '@/i18n/uk'
 
 const t = uk.catalog.card
 
-/** The equipment card (FR-6): gallery, price, facts, description, map with the pin and the owner. */
+/** The equipment card (FR-6): gallery, price, facts, owner, availability and booking, description and map. */
 export function EquipmentView({ item }: { item: EquipmentDetails }) {
   const hidden = item.status !== 'ACTIVE' || item.photos.length === 0
 
@@ -40,6 +41,7 @@ export function EquipmentView({ item }: { item: EquipmentDetails }) {
           <OwnerPanel owner={item.owner} />
         </div>
       </div>
+      <BookingPanel item={item} />
       <section className="flex flex-col gap-2">
         <p className="whitespace-pre-line text-slate-700">{item.description}</p>
       </section>

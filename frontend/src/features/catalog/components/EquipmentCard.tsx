@@ -21,6 +21,9 @@ export function EquipmentCard({ item }: { item: EquipmentSummary }) {
         <p className="text-lg font-bold text-slate-900">
           {formatPrice(item.pricePerDay)} <span className="text-sm font-normal text-slate-500">{t.perDay}</span>
         </p>
+        {item.totalPrice !== null && (
+          <p className="text-sm font-medium text-brand-700">{t.totalForPeriod(formatPrice(item.totalPrice))}</p>
+        )}
         <p className="line-clamp-1 text-sm text-slate-600">
           {item.distanceKm !== null ? t.distance(item.distanceKm) : item.address}
         </p>

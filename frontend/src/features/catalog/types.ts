@@ -43,6 +43,8 @@ export interface EquipmentSummary {
   status: EquipmentStatus
   owner: OwnerBadge
   distanceKm: number | null
+  /** FR-7: days × units × price per day when the search had rental dates. */
+  totalPrice: number | null
 }
 
 export interface EquipmentDetails {

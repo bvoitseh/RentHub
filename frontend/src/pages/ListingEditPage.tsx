@@ -2,6 +2,7 @@ import { Link, useLocation, useParams } from 'react-router'
 import { Alert } from '@/components/ui/Alert'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/Spinner'
+import { BlocksManager } from '@/features/booking/components/BlocksManager'
 import { useEquipmentCard } from '@/features/catalog/hooks/useCatalogQueries'
 import { FormSection } from '@/features/listings/components/FormSection'
 import { ListingForm } from '@/features/listings/components/ListingForm'
@@ -12,7 +13,7 @@ import { NotFoundPage } from '@/pages/NotFoundPage'
 
 const t = uk.listings
 
-/** FR-4a, FR-5: edit an own listing and manage its photos. */
+/** FR-4a, FR-5, FR-8: edit an own listing, manage its photos and close dates in its calendar. */
 export function ListingEditPage() {
   const id = Number(useParams().id)
   const created = Boolean((useLocation().state as { created?: boolean } | null)?.created)
@@ -35,6 +36,9 @@ export function ListingEditPage() {
         <PhotoManager listingId={data.id} photos={data.photos} />
       </FormSection>
       <ListingForm key={data.id} initial={toListingInput(data)} listingId={data.id} onSaved={() => undefined} />
+      <FormSection title={uk.booking.blocks.title}>
+        <BlocksManager equipmentId={data.id} />
+      </FormSection>
     </div>
   )
 }
