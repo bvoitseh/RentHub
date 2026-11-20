@@ -1,4 +1,6 @@
 import { auth } from '@/i18n/uk/auth'
+import { catalog } from '@/i18n/uk/catalog'
+import { listings } from '@/i18n/uk/listings'
 import { profile } from '@/i18n/uk/profile'
 import { validation } from '@/i18n/uk/validation'
 
@@ -35,6 +37,8 @@ export const uk = {
     or: 'або',
   },
   auth,
+  catalog,
+  listings,
   profile,
   validation,
 } as const

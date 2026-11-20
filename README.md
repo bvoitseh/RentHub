@@ -14,19 +14,19 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 |---|---|
 | Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode), Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens), MinIO (S3) |
+| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens, geocoding cache), SeaweedFS (S3 photo storage) |
 
 ## Prerequisites
 
 - JDK 25, Node.js 22+ (24 recommended), npm 10+
-- Docker Desktop (Redis is required by the backend; MinIO for catalogue photos)
+- Docker Desktop (Redis and the S3 storage are required by the backend)
 - An SMTP account for outgoing e-mail (Gmail with an app password works)
 
 ## Run locally
 
 ```bash
-# 1. infrastructure: Redis is required (rate limits, e-mail link tokens); MinIO console: http://localhost:9001
-docker compose up -d redis minio
+# 1. infrastructure: Redis + S3-compatible photo storage (SeaweedFS; s3-init creates the bucket once)
+docker compose up -d redis s3 s3-init
 
 # 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
@@ -56,8 +56,9 @@ precedence. Keys it may contain:
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
-| object storage (later) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` |
-| geocoding (later) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` |
+| object storage (FR-4a) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` (defaults match docker-compose and `infra/seaweedfs/s3.json`) |
+| geocoding (FR-4) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` (Nominatim's policy requires an identifying User-Agent with contact info) |
+| map tiles (frontend) | `VITE_MAP_TILE_URL` in `frontend/.env.local`, optional; OpenStreetMap tiles by default |
 
 Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
 defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
@@ -67,6 +68,23 @@ The only preset account is the administrator: it is created at start-up from `AD
 `dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
 later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
 user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
+
+### Demo data (optional)
+
+`infra/seed/demo-data.sql` adds 6 verified demo owners (4 private persons, 2 companies) and 150 listings around Lviv
+with placeholder photos. It is not a migration: run it by hand once; running it again changes nothing. The photo files
+are uploaded to the bucket by `s3-init`, so start the infrastructure first (`docker compose up -d redis s3 s3-init`).
+
+With the backend running, open http://localhost:8080/h2-console, connect (see above) and execute:
+
+```sql
+RUNSCRIPT FROM '../infra/seed/demo-data.sql' CHARSET 'UTF-8'
+```
+
+The path is relative to the backend's working directory (`renthub/`); use an absolute path if your IDE runs it from
+elsewhere. Demo logins: `seed.olena@example.com`, `seed.andrii@example.com`, `seed.marta@example.com`,
+`seed.taras@example.com`, `seed.budprokat@example.com` (company), `seed.fotozona@example.com` (company), all with the
+password `Password123`. The example.com addresses never receive mail.
 
 ## Build and checks
 

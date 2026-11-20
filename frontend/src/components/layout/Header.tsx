@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router'
 import { UserMenu } from '@/features/auth/components/UserMenu'
+import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { uk } from '@/i18n/uk'
 
 const navLinkClass = ({ isActive }: { isActive: boolean }) =>
@@ -8,6 +9,8 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   }`
 
 export function Header() {
+  const { data: user } = useCurrentUser()
+
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
@@ -20,6 +23,14 @@ export function Header() {
             <NavLink to="/" end className={navLinkClass}>
               {uk.nav.home}
             </NavLink>
+            <NavLink to="/catalog" className={navLinkClass}>
+              {uk.catalog.nav}
+            </NavLink>
+            {user?.role === 'USER' && (
+              <NavLink to="/my/listings" className={navLinkClass}>
+                {uk.listings.nav}
+              </NavLink>
+            )}
           </nav>
         </div>
         <UserMenu />

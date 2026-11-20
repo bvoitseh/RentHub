@@ -11,4 +11,13 @@ export const validation = {
   ownerTypeRequired: 'Оберіть тип облікового запису',
   companyNameRequired: 'Вкажіть назву компанії',
   edrpou: 'Код ЄДРПОУ має складатися з 8 цифр',
+  titleMax: 'Назва має містити не більше 120 символів',
+  descriptionMax: 'Опис має містити не більше 4000 символів',
+  deliveryNoteMax: 'Не більше 500 символів',
+  addressMax: 'Адреса має містити не більше 300 символів',
+  price: 'Вкажіть ціну більшу за нуль (до двох знаків після коми)',
+  wholeNumber: (min: number, max: number) => `Ціле число від ${min} до ${max}`,
+  maxDaysBelowMin: 'Максимум не може бути меншим за мінімум',
+  handoverRequired: 'Увімкніть самовивіз, доставку або обидва варіанти',
+  pinRequired: 'Поставте позначку на мапі',
 } as const

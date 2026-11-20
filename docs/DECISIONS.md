@@ -229,3 +229,49 @@ and ЄДРПОУ), chosen optionally at registration and editable in the profile
 `V4__single_user_role.sql` converts existing rows (RENTER/OWNER → USER, missing type → PRIVATE) and replaces the role
 checks. Wherever the specification says "renter" or "owner", it now means the user's part in a particular booking or
 listing, not an account role.
+
+## D-31 Initial categories come from a migration (2026-11-20)
+
+**Concerns:** CLAUDE.md 2.4 (seed data only in dev, never by migrations), FR-4, FR-22. **Decision:** a listing needs a
+category and category management arrives only with the admin feature, so `V5__categories.sql` inserts ten categories
+(with season months for FR-17) as reference data, not demo data. No demo listings are seeded (author's answer).
+
+## D-32 Catalogue parts that depend on later features (2026-11-20)
+
+**Concerns:** FR-5, FR-7, FR-19. **Decision:** until bookings and reviews exist: the FR-7 date filter applies only
+`minDays`/`maxDays` (free units on those dates come with availability); FR-5 "frozen terms while booked" and "delete
+only without bookings" are empty checks in `ListingServiceImpl`; owner rating and review count are null/0, sort
+`rating` falls back to newest, and the public profile's owner-cancellation and complaint counts are 0.
+
+## D-33 SeaweedFS instead of MinIO for local S3 storage (2026-11-20)
+
+**Concerns:** FR-4a, NFR-13, rule 1.5. **Decision:** MinIO no longer publishes free container images (the Docker Hub
+repository is gone and quay.io requires a login), so docker-compose runs SeaweedFS 4.50 (Apache-2.0) with its S3 API on
+:8333, identities and anonymous read in `infra/seaweedfs/s3.json`, and `s3-init` creating the bucket. The backend is
+unchanged: it speaks plain S3 through the AWS SDK and works with MinIO, AWS S3 or any compatible service via `S3_*`.
+
+## D-34 Leaflet without react-leaflet (2026-11-20)
+
+**Concerns:** CLAUDE.md §3 (Leaflet + react-leaflet), rule 1.5. **Decision:** react-leaflet is licensed Hippocratic-2.1,
+which is not OSI-approved, so the unused dependency was removed and maps use Leaflet 1.9.4 (BSD-2-Clause) through a
+small hook (`useLeafletMap`) and two components (`MapView`, `PinPicker`).
+
+## D-35 Catalogue details not fixed by the specification (2026-11-20)
+
+**Concerns:** FR-4, FR-4a, FR-5, FR-6. **Decision:** (1) a listing is created first and gets photos afterwards, so it
+stays out of the catalogue until it has at least one photo, and its last photo cannot be deleted (replace = upload,
+then delete); (2) photo type is decided by the file's magic bytes, not the client's Content-Type; (3) `GET
+/equipment/my` (not in the API outline) serves the owner's dashboard with listings in every status; (4) `GET /geocode`
+needs a logged-in user, to keep Nominatim traffic to real listing work; (5) a non-public listing's card is visible to its
+owner only (404 for others); (6) archiving is one-way, as the specification has no "unarchive".
+
+## D-36 Demo data as a hand-run SQL script (2026-11-20)
+
+**Concerns:** CLAUDE.md 2.4 (demo accounts and ~150 listings in Lviv, never by production migrations), D-21, D-31.
+**Decision:** author's request. `infra/seed/demo-data.sql` creates 6 verified owners (`seed.*@example.com`, password
+`Password123`; two of them companies) and 150 listings around Lviv and five nearby towns, three of them archived, each
+with one or two generated placeholder photos. It is outside `db/migration`, so Flyway never runs it; every insert is
+guarded with `NOT EXISTS`, so re-running is harmless. Rows reference users and categories by e-mail and name, never by
+id, so identity sequences stay intact. The photo files live in `infra/seed/photos` and are uploaded to
+`renthub-photos/seed/` by the `s3-init` job. Street names and coordinates are random within the area, so a pin does not
+match its street.
