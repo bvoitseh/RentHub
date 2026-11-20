@@ -275,3 +275,43 @@ guarded with `NOT EXISTS`, so re-running is harmless. Rows reference users and c
 id, so identity sequences stay intact. The photo files live in `infra/seed/photos` and are uploaded to
 `renthub-photos/seed/` by the `s3-init` job. Street names and coordinates are random within the area, so a pin does not
 match its street.
+
+## D-37 Versioned commission rates instead of a settings singleton (2026-11-20)
+
+**Concerns:** FR-10, FR-22, NFR-10; supersedes the settings part of D-9 and D-26. **Decision:** author's request (no
+singleton rows; rates may change over time and discounts may come later). `V7` creates `commission_rates (rate,
+valid_from)`: the rate in force at a moment is the newest row whose `valid_from` has started; rows are never edited, a
+new rate is a new row. The first row copies the 10 % from the old `settings` table, which stays in the database unused
+(dropping it needs the author's explicit request, CLAUDE.md 2.4). Every booking stores `commission_rate_id` together
+with the computed `commission` and the `price_per_day` it was priced with, so later rate or price changes never alter
+existing bookings. Managing rates is part of the admin feature.
+
+## D-38 Booking horizon of 365 days (2026-11-20)
+
+**Concerns:** FR-9, FR-10, NFR-1. The specification has no upper bound. **Decision:** author's approval. A booking's
+last day may be at most today + 365 days (`BOOKING_HORIZON_DAYS`), the same limit applies to calendar blocks, and the
+availability endpoint answers at most 366 days per request, which keeps the per-day computation bounded.
+
+## D-39 Pending requests hold their units (2026-11-20)
+
+**Concerns:** FR-9 ("NEW requests do not reserve units"), FR-7, FR-11. **Decision:** author's request — a renter
+must not be able to request days already requested by someone else. Free units on a day are therefore
+`quantity − Σ units of NEW and CONFIRMED bookings` (0 on a blocked day), everywhere: the availability endpoint, the
+catalogue date filter, the check on creation and the re-check on confirmation (which ignores the booking being
+confirmed). A NEW request releases its units when it is rejected, cancelled or expires (FR-15b, at most 48 h). Both
+creation and confirmation lock the listing row first (FR-11), so parallel requests for the last unit get one `201` and
+one `409 booking.unavailable` with the days lacking units.
+
+## D-40 Availability blocks and booking details not fixed by the specification (2026-11-20)
+
+**Concerns:** FR-8, FR-12, FR-13, FR-13a, FR-15b, FR-3b. **Decision:** (1) a block may not overlap another block or
+days held by a NEW/CONFIRMED booking (`409 block.has_bookings` lists them — the owner rejects or cancels first) and
+can only cover today…horizon; creating one takes the listing row lock; (2) confirming a request whose deadline has
+passed answers `409 booking.expired` even if the hourly job has not run yet, and only a public listing can be
+confirmed; (3) the renter's cancel needs no reason, the owner's needs 10–500 characters; an expired request is
+`REJECTED` with `expired = true`; (4) `GET /bookings/incoming` accepts an optional `status` filter, lists are paged by
+20; (5) the contact endpoint returns the other party's name and phone (admin access comes with the admin feature);
+(6) the jobs run by cron in Europe/Kyiv — completion daily at 00:05, expiry hourly — so a request whose first day
+arrives expires within an hour after midnight; (7) e-mail notifications (FR-15a) come with `feature/notifications`,
+automatic cancellation on admin block (FR-20) with moderation; (8) deleting a listing (allowed only without bookings)
+also deletes its calendar blocks.
