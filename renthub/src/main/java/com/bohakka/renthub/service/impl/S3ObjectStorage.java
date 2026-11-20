@@ -9,7 +9,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
-/** {@link ObjectStorage} on any S3-compatible service (MinIO locally) through the AWS SDK v2 client. */
+/** {@link ObjectStorage} on any S3-compatible service (SeaweedFS locally) through the AWS SDK v2 client. */
 @Component
 @RequiredArgsConstructor
 public class S3ObjectStorage implements ObjectStorage {

@@ -106,15 +106,15 @@ app:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}
     name: ${ADMIN_NAME:Адміністратор}
-  # FR-4a: S3-compatible object storage for listing photos (MinIO from docker-compose by default).
+  # FR-4a: S3-compatible object storage for listing photos (SeaweedFS from docker-compose by default, D-33).
   storage:
-    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    endpoint: ${S3_ENDPOINT:http://localhost:8333}
     region: ${S3_REGION:us-east-1}
     bucket: ${S3_BUCKET:renthub-photos}
-    access-key: ${S3_ACCESS_KEY:minioadmin}
-    secret-key: ${S3_SECRET_KEY:minioadmin}
+    access-key: ${S3_ACCESS_KEY:renthub}
+    secret-key: ${S3_SECRET_KEY:renthub-local-secret}
     # Base URL under which stored objects are publicly readable (the bucket allows anonymous download).
-    public-url: ${S3_PUBLIC_URL:http://localhost:9000/renthub-photos}
+    public-url: ${S3_PUBLIC_URL:http://localhost:8333/renthub-photos}
   # FR-4, NFR-13: OpenStreetMap Nominatim; its policy requires an identifying User-Agent and <= 1 request/second.
   geocoding:
     url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}

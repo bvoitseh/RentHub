@@ -1,6 +1,6 @@
-# Local infrastructure: Redis (rate limits and e-mail link tokens, required by the backend) and MinIO as
-# S3-compatible object storage (catalogue photos). The database is embedded H2 and e-mail goes to a real SMTP relay.
-# Usage: docker compose up -d redis minio
+# Local infrastructure: Redis (rate limits, e-mail link tokens, geocoding cache; required by the backend) and
+# SeaweedFS as S3-compatible object storage (listing photos). The database is embedded H2; e-mail goes to a real SMTP relay.
+# Usage: docker compose up -d redis s3 s3-init
 services:
   redis:
     image: redis:8.2.11-alpine
@@ -16,42 +16,30 @@ services:
       timeout: 5s
       retries: 5
 
-  minio:
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
-    container_name: renthub-minio
-    command: server /data --console-address ":9001"
-    environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+  # S3-compatible object storage for listing photos (FR-4a): SeaweedFS, Apache-2.0 (DECISIONS.md D-33).
+  # Credentials and anonymous read access are defined in infra/seaweedfs/s3.json (local development only).
+  s3:
+    image: chrislusf/seaweedfs:4.50
+    container_name: renthub-s3
+    command: server -dir=/data -s3 -s3.port=8333 -s3.config=/etc/seaweedfs/s3.json
     ports:
-      - "9000:9000"   # S3 API
-      - "9001:9001"   # web console
+      - "8333:8333"   # S3 API; photos are publicly readable at http://localhost:8333/renthub-photos/<key>
     volumes:
-      - minio-data:/data
-    healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      - s3-data:/data
+      - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
 
-  # One-shot job: creates the photos bucket and makes it publicly readable (photo URLs are public, FR-4a).
-  minio-init:
-    image: minio/mc:RELEASE.2025-08-13T08-35-41Z
-    container_name: renthub-minio-init
+  # One-shot job: creates the photos bucket (safe to re-run; retries until the server is up).
+  s3-init:
+    image: chrislusf/seaweedfs:4.50
+    container_name: renthub-s3-init
     depends_on:
-      minio:
-        condition: service_healthy
+      - s3
     environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
-      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
       S3_BUCKET: ${S3_BUCKET:-renthub-photos}
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 $$S3_ACCESS_KEY $$S3_SECRET_KEY &&
-      mc mb --ignore-existing local/$$S3_BUCKET &&
-      mc anonymous set download local/$$S3_BUCKET
-      "
+    volumes:
+      - ./infra/seaweedfs/create-bucket.sh:/create-bucket.sh:ro
+    entrypoint: ["/bin/sh", "/create-bucket.sh"]
 
 volumes:
   redis-data:
-  minio-data:
+  s3-data:

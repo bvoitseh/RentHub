@@ -1,0 +1,13 @@
+{
+  "identities": [
+    {
+      "name": "renthub",
+      "credentials": [{ "accessKey": "renthub", "secretKey": "renthub-local-secret" }],
+      "actions": ["Admin", "Read", "List", "Write", "Tagging"]
+    },
+    {
+      "name": "anonymous",
+      "actions": ["Read"]
+    }
+  ]
+}

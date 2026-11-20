@@ -9,7 +9,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 
-/** S3 client for any S3-compatible storage (MinIO locally); path-style addressing works with MinIO and AWS alike. */
+/** S3 client for any S3-compatible storage (SeaweedFS locally, D-33); path-style addressing works with all of them. */
 @Configuration
 public class S3Config {
 
