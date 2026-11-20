@@ -37,6 +37,9 @@ import org.springframework.security.web.session.SessionInformationExpiredStrateg
 public class SecurityConfig {
 
 	private static final String[] DEV_TOOLS = {"/h2-console/**"};
+	/** FR-6, FR-7, FR-19: the catalogue, cards, categories and public profiles are open to guests. */
+	private static final String[] PUBLIC_GET = {"/api/v1/categories", "/api/v1/equipment", "/api/v1/equipment/{id:\\d+}",
+		"/api/v1/users/{id:\\d+}"};
 	private static final String[] PUBLIC_AUTH_POST = {"/api/v1/auth/register", "/api/v1/auth/login",
 		"/api/v1/auth/restore", "/api/v1/auth/verify-email", "/api/v1/auth/forgot-password", "/api/v1/auth/reset-password"};
 
@@ -96,6 +99,7 @@ public class SecurityConfig {
 			.authorizeHttpRequests(auth -> {
 				auth.requestMatchers("/actuator/health").permitAll();
 				auth.requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POST).permitAll();
+				auth.requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll();
 				auth.requestMatchers(DEV_TOOLS).permitAll();
 				auth.anyRequest().authenticated();
 			});
