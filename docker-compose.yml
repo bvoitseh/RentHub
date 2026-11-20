@@ -28,7 +28,7 @@ services:
       - s3-data:/data
       - ./infra/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
 
-  # One-shot job: creates the photos bucket (safe to re-run; retries until the server is up).
+  # One-shot job: creates the photos bucket and uploads the demo photos (safe to re-run; retries until the server is up).
   s3-init:
     image: chrislusf/seaweedfs:4.50
     container_name: renthub-s3-init
@@ -38,6 +38,7 @@ services:
       S3_BUCKET: ${S3_BUCKET:-renthub-photos}
     volumes:
       - ./infra/seaweedfs/create-bucket.sh:/create-bucket.sh:ro
+      - ./infra/seed/photos:/seed-photos:ro
     entrypoint: ["/bin/sh", "/create-bucket.sh"]
 
 volumes:

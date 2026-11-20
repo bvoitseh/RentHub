@@ -264,3 +264,14 @@ then delete); (2) photo type is decided by the file's magic bytes, not the clien
 /equipment/my` (not in the API outline) serves the owner's dashboard with listings in every status; (4) `GET /geocode`
 needs a logged-in user, to keep Nominatim traffic to real listing work; (5) a non-public listing's card is visible to its
 owner only (404 for others); (6) archiving is one-way, as the specification has no "unarchive".
+
+## D-36 Demo data as a hand-run SQL script (2026-11-20)
+
+**Concerns:** CLAUDE.md 2.4 (demo accounts and ~150 listings in Lviv, never by production migrations), D-21, D-31.
+**Decision:** author's request. `infra/seed/demo-data.sql` creates 6 verified owners (`seed.*@example.com`, password
+`Password123`; two of them companies) and 150 listings around Lviv and five nearby towns, three of them archived, each
+with one or two generated placeholder photos. It is outside `db/migration`, so Flyway never runs it; every insert is
+guarded with `NOT EXISTS`, so re-running is harmless. Rows reference users and categories by e-mail and name, never by
+id, so identity sequences stay intact. The photo files live in `infra/seed/photos` and are uploaded to
+`renthub-photos/seed/` by the `s3-init` job. Street names and coordinates are random within the area, so a pin does not
+match its street.

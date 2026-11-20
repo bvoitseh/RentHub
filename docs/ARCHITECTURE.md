@@ -11,7 +11,8 @@ renthub/
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
 ├─ docker-compose.yml   redis · s3 (SeaweedFS) + s3-init (bucket)
-├─ infra/seaweedfs/     s3.json (local S3 identities) · create-bucket.sh
+├─ infra/seaweedfs/     s3.json (local S3 identities) · create-bucket.sh (bucket + demo photos)
+├─ infra/seed/          demo-data.sql (run by hand, D-36) · photos/ (placeholders uploaded by s3-init)
 └─ dev.env              local environment (git-ignored); the keys are listed in the README
 ```
 

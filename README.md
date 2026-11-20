@@ -69,6 +69,23 @@ The only preset account is the administrator: it is created at start-up from `AD
 later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
 user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
 
+### Demo data (optional)
+
+`infra/seed/demo-data.sql` adds 6 verified demo owners (4 private persons, 2 companies) and 150 listings around Lviv
+with placeholder photos. It is not a migration: run it by hand once; running it again changes nothing. The photo files
+are uploaded to the bucket by `s3-init`, so start the infrastructure first (`docker compose up -d redis s3 s3-init`).
+
+With the backend running, open http://localhost:8080/h2-console, connect (see above) and execute:
+
+```sql
+RUNSCRIPT FROM '../infra/seed/demo-data.sql' CHARSET 'UTF-8'
+```
+
+The path is relative to the backend's working directory (`renthub/`); use an absolute path if your IDE runs it from
+elsewhere. Demo logins: `seed.olena@example.com`, `seed.andrii@example.com`, `seed.marta@example.com`,
+`seed.taras@example.com`, `seed.budprokat@example.com` (company), `seed.fotozona@example.com` (company), all with the
+password `Password123`. The example.com addresses never receive mail.
+
 ## Build and checks
 
 ```bash
