@@ -1,8 +1,11 @@
 package com.bohakka.renthub.service.impl;
 
+import com.bohakka.renthub.dto.BookingRef;
 import com.bohakka.renthub.dto.EquipmentDetailsResponse;
 import com.bohakka.renthub.dto.EquipmentRequest;
 import com.bohakka.renthub.dto.EquipmentSummaryResponse;
+import com.bohakka.renthub.entity.Booking;
+import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.entity.Category;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.EquipmentPhoto;
@@ -11,13 +14,17 @@ import com.bohakka.renthub.entity.RentalTerms;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.event.StoredObjectsRemoved;
 import com.bohakka.renthub.exception.BusinessRuleException;
+import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.exception.NotFoundException;
+import com.bohakka.renthub.repository.AvailabilityBlockRepository;
+import com.bohakka.renthub.repository.BookingRepository;
 import com.bohakka.renthub.repository.CategoryRepository;
 import com.bohakka.renthub.repository.EquipmentPhotoRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.repository.UserRepository;
 import com.bohakka.renthub.service.ListingService;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,6 +40,8 @@ public class ListingServiceImpl implements ListingService {
 
 	private final EquipmentRepository equipment;
 	private final EquipmentPhotoRepository photos;
+	private final BookingRepository bookings;
+	private final AvailabilityBlockRepository blocks;
 	private final CategoryRepository categories;
 	private final UserRepository users;
 	private final EquipmentAccess access;
@@ -83,6 +92,7 @@ public class ListingServiceImpl implements ListingService {
 		Equipment listing = access.owned(ownerId, equipmentId);
 		assertHasNoBookings(listing);
 		List<String> keys = listing.photoKeys();
+		blocks.deleteByEquipmentId(listing.getId());
 		equipment.delete(listing);
 		events.publishEvent(new StoredObjectsRemoved(keys));
 	}
@@ -93,7 +103,7 @@ public class ListingServiceImpl implements ListingService {
 		List<Equipment> mine = equipment.findByOwnerIdOrderByCreatedAtDesc(ownerId);
 		Map<Long, String> covers = photos.findCovers(mine.stream().map(Equipment::getId).toList()).stream()
 			.collect(Collectors.toMap(p -> p.getEquipment().getId(), EquipmentPhoto::getStorageKey));
-		return mine.stream().map(e -> mapper.summary(e, covers.get(e.getId()), null)).toList();
+		return mine.stream().map(e -> mapper.summary(e, covers.get(e.getId()), null, null)).toList();
 	}
 
 	private Category category(Long categoryId) {
@@ -108,14 +118,21 @@ public class ListingServiceImpl implements ListingService {
 
 	/**
 	 * FR-5: price and rental terms are frozen while the listing has NEW or CONFIRMED bookings with dateTo >= today
-	 * (409 listing them). Bookings do not exist yet; the availability-booking feature fills this in (D-32).
+	 * (409 listing them).
 	 */
 	private void assertNoActiveBookings(Equipment listing) {
-		// Intentionally empty until the availability-booking feature.
+		List<Booking> active = bookings.findActiveForEquipment(listing.getId(), BookingStatus.HOLDING_UNITS,
+			LocalDate.now(clock));
+		if (!active.isEmpty()) {
+			throw new ConflictException("equipment.has_active_bookings", "equipment.has_active_bookings")
+				.withProperty("bookings", active.stream().map(BookingRef::of).toList());
+		}
 	}
 
-	/** FR-5: deletion only without any bookings; filled in by the availability-booking feature (D-32). */
+	/** FR-5: deletion only without any bookings at all (whatever their status). */
 	private void assertHasNoBookings(Equipment listing) {
-		// Intentionally empty until the availability-booking feature.
+		if (bookings.existsByEquipmentId(listing.getId())) {
+			throw new ConflictException("equipment.has_bookings", "equipment.has_bookings");
+		}
 	}
 }

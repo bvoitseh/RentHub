@@ -1,0 +1,149 @@
+package com.bohakka.renthub.service.impl;
+
+import com.bohakka.renthub.dto.BookingRequest;
+import com.bohakka.renthub.dto.BookingResponse;
+import com.bohakka.renthub.entity.Booking;
+import com.bohakka.renthub.entity.BookingPeriod;
+import com.bohakka.renthub.entity.CommissionRate;
+import com.bohakka.renthub.entity.Equipment;
+import com.bohakka.renthub.entity.Role;
+import com.bohakka.renthub.entity.User;
+import com.bohakka.renthub.exception.BusinessRuleException;
+import com.bohakka.renthub.exception.ConflictException;
+import com.bohakka.renthub.exception.ForbiddenException;
+import com.bohakka.renthub.exception.NotFoundException;
+import com.bohakka.renthub.properties.BookingProperties;
+import com.bohakka.renthub.repository.BookingRepository;
+import com.bohakka.renthub.repository.CommissionRateRepository;
+import com.bohakka.renthub.repository.EquipmentRepository;
+import com.bohakka.renthub.repository.UserRepository;
+import com.bohakka.renthub.service.AvailabilityService;
+import com.bohakka.renthub.service.BookingService;
+import java.time.Clock;
+import java.time.LocalDate;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * {@link BookingService}. Creating and confirming a booking run in one transaction that first locks the listing row and
+ * then re-checks the free units (FR-11), so parallel requests for the same days are serialised and the excess ones get
+ * 409. Pending requests hold their units too (D-39).
+ */
+@Service
+@RequiredArgsConstructor
+public class BookingServiceImpl implements BookingService {
+
+	private final BookingRepository bookings;
+	private final EquipmentRepository equipment;
+	private final UserRepository users;
+	private final CommissionRateRepository rates;
+	private final AvailabilityService availability;
+	private final BookingDeadline deadline;
+	private final BookingMapper mapper;
+	private final BookingProperties properties;
+	private final Clock clock;
+
+	@Override
+	@Transactional
+	public BookingResponse create(Long renterId, BookingRequest request) {
+		User renter = users.findById(renterId)
+			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
+		assertMayBook(renter);
+		Equipment listing = equipment.lockById(request.equipmentId())
+			.filter(Equipment::isPublic)
+			.orElseThrow(() -> new NotFoundException("equipment.not_found", "equipment.not_found"));
+		if (listing.isOwnedBy(renterId)) {
+			throw rule("booking.own_equipment");
+		}
+		BookingPeriod period = new BookingPeriod(request.dateFrom(), request.dateTo());
+		assertTerms(listing, period, request);
+		availability.assertFree(listing, request.units(), period, null);
+		CommissionRate rate = rates.findFirstByValidFromLessThanEqualOrderByValidFromDesc(clock.instant())
+			.orElseThrow(() -> new IllegalStateException("No commission rate in force"));
+		Booking booking = new Booking(listing, renter, request.units(), period, request.handover(), rate,
+			clock.instant());
+		return mapper.toResponse(bookings.save(booking));
+	}
+
+	@Override
+	@Transactional
+	public BookingResponse confirm(Long ownerId, Long bookingId) {
+		Booking booking = find(bookingId);
+		if (!booking.isOwner(ownerId)) {
+			throw new ForbiddenException("booking.not_participant", "booking.not_participant");
+		}
+		Equipment listing = equipment.lockById(booking.getEquipment().getId()).orElseThrow();
+		if (deadline.hasPassed(booking)) {
+			throw new ConflictException("booking.expired", "booking.expired");
+		}
+		if (!listing.isPublic()) {
+			throw rule("booking.equipment_unavailable");
+		}
+		availability.assertFree(listing, booking.getUnits(), booking.period(), booking.getId());
+		booking.confirm(ownerId, clock.instant());
+		return mapper.toResponse(booking);
+	}
+
+	@Override
+	@Transactional
+	public BookingResponse reject(Long ownerId, Long bookingId) {
+		Booking booking = find(bookingId);
+		booking.reject(ownerId, clock.instant());
+		return mapper.toResponse(booking);
+	}
+
+	@Override
+	@Transactional
+	public BookingResponse cancel(Long userId, Long bookingId, String reason) {
+		Booking booking = find(bookingId);
+		LocalDate today = LocalDate.now(clock);
+		if (booking.isRenter(userId)) {
+			booking.cancelByRenter(userId, today, clock.instant());
+		} else {
+			booking.cancelByOwner(userId, reason, today, clock.instant());
+		}
+		return mapper.toResponse(booking);
+	}
+
+	/** FR-1: an active user account with a verified e-mail; the administrator does not rent. */
+	private static void assertMayBook(User user) {
+		if (user.getRole() != Role.USER || !user.isActive()) {
+			throw new ForbiddenException("booking.forbidden", "booking.forbidden");
+		}
+		if (!user.isEmailVerified()) {
+			throw new ForbiddenException("booking.email_not_verified", "booking.email_not_verified");
+		}
+	}
+
+	/** Booking validation (spec §2): dates, horizon (D-38), min/max days, units, handover. */
+	private void assertTerms(Equipment listing, BookingPeriod period, BookingRequest request) {
+		LocalDate today = LocalDate.now(clock);
+		LocalDate earliest = today.plusDays(properties.minLeadDays());
+		if (period.from().isBefore(earliest)) {
+			throw rule("booking.too_early", earliest);
+		}
+		if (period.to().isAfter(today.plusDays(properties.horizonDays()))) {
+			throw rule("booking.too_far", properties.horizonDays());
+		}
+		if (!listing.terms().allowsDuration(period.days())) {
+			throw listing.getMaxDays() == null ? rule("booking.too_short", listing.getMinDays())
+				: rule("booking.duration_invalid", listing.getMinDays(), listing.getMaxDays());
+		}
+		if (request.units() > listing.getQuantity()) {
+			throw rule("booking.units_invalid", listing.getQuantity());
+		}
+		if (!request.handover().offeredBy(listing.terms())) {
+			throw rule("booking.handover_unavailable");
+		}
+	}
+
+	private Booking find(Long bookingId) {
+		return bookings.findWithPartiesById(bookingId)
+			.orElseThrow(() -> new NotFoundException("booking.not_found", "booking.not_found"));
+	}
+
+	private static BusinessRuleException rule(String key, Object... args) {
+		return new BusinessRuleException(key, key, args);
+	}
+}

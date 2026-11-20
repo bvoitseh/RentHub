@@ -148,6 +148,11 @@ public class Equipment {
 		return new GeoPoint(lat, lon);
 	}
 
+	/** FR-6, FR-3c: shown in the catalogue and bookable — active, owner neither blocked nor deactivated, has a photo. */
+	public boolean isPublic() {
+		return status == EquipmentStatus.ACTIVE && owner.isActive() && !photos.isEmpty();
+	}
+
 	public boolean isOwnedBy(Long userId) {
 		return owner.getId().equals(userId);
 	}
