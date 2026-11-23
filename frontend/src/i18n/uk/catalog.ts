@@ -9,6 +9,7 @@ export const catalog = {
   empty: 'Нічого не знайдено',
   emptyHint: 'Спробуйте змінити або скинути фільтри.',
   perDay: 'за добу',
+  totalForPeriod: (sum: string) => `${sum} за обраний період`,
   units: (n: number) => `${n} шт.`,
   distance: (km: number) => `${km} км від вас`,
   noPhoto: 'Без фото',

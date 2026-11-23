@@ -1,15 +1,22 @@
 package com.bohakka.renthub.service.impl;
 
+import com.bohakka.renthub.dto.BookingRef;
 import com.bohakka.renthub.dto.ProfileUpdateRequest;
+import com.bohakka.renthub.entity.Booking;
+import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.entity.User;
+import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.exception.ForbiddenException;
 import com.bohakka.renthub.exception.NotFoundException;
+import com.bohakka.renthub.repository.BookingRepository;
 import com.bohakka.renthub.repository.UserRepository;
 import com.bohakka.renthub.security.SessionEstablisher;
 import com.bohakka.renthub.security.SessionTerminator;
 import com.bohakka.renthub.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
+import java.time.LocalDate;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccountServiceImpl implements AccountService {
 
 	private final UserRepository users;
+	private final BookingRepository bookings;
 	private final PasswordEncoder passwordEncoder;
 	private final SessionTerminator sessionTerminator;
 	private final SessionEstablisher sessions;
@@ -54,7 +62,8 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	@Transactional
 	public void deactivate(Long userId, String password, HttpServletRequest http) {
-		User user = get(userId);
+		User user = users.lockById(userId)
+			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
 		if (!passwordEncoder.matches(password, user.getPasswordHash())) {
 			throw new ForbiddenException("user.wrong_password", "user.wrong_password");
 		}
@@ -65,10 +74,14 @@ public class AccountServiceImpl implements AccountService {
 	}
 
 	/**
-	 * FR-3c forbids deactivation while the user has NEW or CONFIRMED bookings with dateTo >= today, as renter or owner.
-	 * Bookings do not exist yet; the booking feature replaces this with the real query (see DECISIONS.md D-12).
+	 * FR-3c forbids deactivation while the user has NEW or CONFIRMED bookings with dateTo >= today, as renter or owner;
+	 * the 409 lists them. The user row is locked first; booking requests lock it too, so none can slip in between.
 	 */
 	private void assertNoActiveBookings(User user) {
-		// Intentionally empty until the availability-booking feature.
+		List<Booking> active = bookings.findActiveForUser(user.getId(), BookingStatus.HOLDING_UNITS, LocalDate.now(clock));
+		if (!active.isEmpty()) {
+			throw new ConflictException("user.has_active_bookings", "user.has_active_bookings")
+				.withProperty("bookings", active.stream().map(BookingRef::of).toList());
+		}
 	}
 }

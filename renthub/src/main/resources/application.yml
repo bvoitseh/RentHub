@@ -120,6 +120,13 @@ app:
     url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
     user-agent: ${NOMINATIM_USER_AGENT:RentHub/0.1}
     country-codes: ua
+  # FR-10...FR-15b: booking rules and the scheduler jobs (cron fields: second minute hour day month weekday).
+  booking:
+    min-lead-days: ${BOOKING_MIN_LEAD_DAYS:1}
+    horizon-days: ${BOOKING_HORIZON_DAYS:365}
+    request-ttl: ${BOOKING_REQUEST_TTL:48h}
+    complete-cron: "0 5 0 * * *"
+    expire-cron: "0 0 * * * *"
   # NFR-14: "limit" attempts per "window"; reaching the limit locks the key for another window.
   rate-limit:
     login:

@@ -10,6 +10,7 @@ import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
 import { useDeactivateAccount } from '@/features/auth/hooks/useAccountMutations'
 import { deactivateSchema, type DeactivateInput } from '@/features/auth/schemas/deactivateSchema'
+import { BlockingBookings } from '@/features/booking/components/BlockingBookings'
 import { uk } from '@/i18n/uk'
 
 const t = uk.profile.deactivate
@@ -39,6 +40,7 @@ export function DeactivateAccountCard() {
       {deactivate.isError && (
         <Alert tone="error" className="mt-3">
           {problemMessage(deactivate.error)}
+          <BlockingBookings error={deactivate.error} />
         </Alert>
       )}
       <form onSubmit={form.handleSubmit(setPending)} noValidate className="mt-4 flex flex-col gap-3 sm:max-w-sm">

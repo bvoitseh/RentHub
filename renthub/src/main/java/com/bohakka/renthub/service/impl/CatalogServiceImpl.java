@@ -2,6 +2,7 @@ package com.bohakka.renthub.service.impl;
 
 import static com.bohakka.renthub.repository.EquipmentSpecifications.allowsDuration;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.deliveryAvailable;
+import static com.bohakka.renthub.repository.EquipmentSpecifications.hasFreeUnits;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.hasUnits;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.inCategory;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.matchesText;
@@ -10,6 +11,8 @@ import static com.bohakka.renthub.repository.EquipmentSpecifications.ownedByType
 import static com.bohakka.renthub.repository.EquipmentSpecifications.pickupAvailable;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.priceAtLeast;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.priceAtMost;
+import static com.bohakka.renthub.repository.EquipmentSpecifications.totalAtLeast;
+import static com.bohakka.renthub.repository.EquipmentSpecifications.totalAtMost;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.visibleInCatalogue;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.withinKm;
 
@@ -19,13 +22,14 @@ import com.bohakka.renthub.dto.EquipmentSummaryResponse;
 import com.bohakka.renthub.dto.PageResponse;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.EquipmentPhoto;
-import com.bohakka.renthub.entity.EquipmentStatus;
 import com.bohakka.renthub.entity.GeoPoint;
 import com.bohakka.renthub.exception.BusinessRuleException;
 import com.bohakka.renthub.exception.NotFoundException;
+import com.bohakka.renthub.properties.BookingProperties;
 import com.bohakka.renthub.repository.EquipmentPhotoRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.service.CatalogService;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -49,6 +53,7 @@ public class CatalogServiceImpl implements CatalogService {
 	private final EquipmentRepository equipment;
 	private final EquipmentPhotoRepository photos;
 	private final EquipmentMapper mapper;
+	private final BookingProperties bookingProperties;
 	private final Clock clock;
 
 	@Override
@@ -68,14 +73,16 @@ public class CatalogServiceImpl implements CatalogService {
 		Page<Equipment> result = equipment.findAll(spec, PageRequest.of(page, size, sort.sort()));
 		Map<Long, String> covers = photos.findCovers(result.map(Equipment::getId).getContent()).stream()
 			.collect(Collectors.toMap(p -> p.getEquipment().getId(), EquipmentPhoto::getStorageKey));
-		return PageResponse.of(result, e -> mapper.summary(e, covers.get(e.getId()), distance(point, e)));
+		Long multiplier = totalMultiplier(query);
+		return PageResponse.of(result, e -> mapper.summary(e, covers.get(e.getId()), distance(point, e),
+			multiplier == null ? null : e.getPricePerDay().multiply(BigDecimal.valueOf(multiplier))));
 	}
 
 	@Override
 	@Transactional(readOnly = true)
 	public EquipmentDetailsResponse card(Long equipmentId, Long viewerId) {
 		Equipment listing = equipment.findWithDetailsById(equipmentId)
-			.filter(e -> isPublic(e) || viewerId != null && e.isOwnedBy(viewerId))
+			.filter(e -> e.isPublic() || viewerId != null && e.isOwnedBy(viewerId))
 			.orElseThrow(() -> new NotFoundException("equipment.not_found", "equipment.not_found"));
 		return mapper.details(listing, viewerId);
 	}
@@ -91,18 +98,23 @@ public class CatalogServiceImpl implements CatalogService {
 		if (query.priceMin() != null && query.priceMax() != null && query.priceMin().compareTo(query.priceMax()) > 0) {
 			throw rule("catalog.price_range_invalid");
 		}
+		Integer days = rentalDays(query.dateFrom(), query.dateTo());
+		Long multiplier = totalMultiplier(query);
 		if (query.priceMin() != null) {
-			spec = spec.and(priceAtLeast(query.priceMin()));
+			spec = spec.and(multiplier == null ? priceAtLeast(query.priceMin())
+				: totalAtLeast(query.priceMin(), multiplier));
 		}
 		if (query.priceMax() != null) {
-			spec = spec.and(priceAtMost(query.priceMax()));
+			spec = spec.and(multiplier == null ? priceAtMost(query.priceMax())
+				: totalAtMost(query.priceMax(), multiplier));
 		}
-		Integer days = rentalDays(query.dateFrom(), query.dateTo());
-		if (days != null) {
-			spec = spec.and(allowsDuration(days));
-		}
+		int units = query.units() == null ? 1 : query.units();
 		if (query.units() != null) {
-			spec = spec.and(hasUnits(query.units()));
+			spec = spec.and(hasUnits(units));
+		}
+		if (days != null) {
+			spec = spec.and(allowsDuration(days)).and(hasFreeUnits(units, query.dateFrom(), query.dateTo(),
+				clock.instant().minus(bookingProperties.requestTtl()), LocalDate.now(clock)));
 		}
 		if (point != null && query.radiusKm() != null) {
 			spec = spec.and(withinKm(point, query.radiusKm()));
@@ -120,8 +132,7 @@ public class CatalogServiceImpl implements CatalogService {
 	}
 
 	/**
-	 * FR-7, NFR-10: both dates or none, from today on, at least one day. Only minDays/maxDays are applied here; free
-	 * units on those dates are checked by the availability feature (DECISIONS.md D-32).
+	 * FR-7, NFR-10: both dates or none, from today on, at least one day.
 	 */
 	private Integer rentalDays(LocalDate from, LocalDate to) {
 		if (from == null && to == null) {
@@ -131,6 +142,15 @@ public class CatalogServiceImpl implements CatalogService {
 			throw rule("catalog.dates_invalid");
 		}
 		return Math.toIntExact(ChronoUnit.DAYS.between(from, to) + 1);
+	}
+
+	/**
+	 * FR-7: with rental dates the price range and the card price refer to the total cost, days × units × price per
+	 * day (units default to 1); sorting by price per day gives the same order. Null without dates.
+	 */
+	private Long totalMultiplier(CatalogQuery query) {
+		Integer days = rentalDays(query.dateFrom(), query.dateTo());
+		return days == null ? null : (long) days * (query.units() == null ? 1 : query.units());
 	}
 
 	private static GeoPoint point(CatalogQuery query) {
@@ -145,11 +165,6 @@ public class CatalogServiceImpl implements CatalogService {
 
 	private static Double distance(GeoPoint point, Equipment e) {
 		return point == null ? null : Math.round(point.distanceKmTo(e.location()) * 10) / 10.0;
-	}
-
-	/** FR-6, FR-3c: what {@code visibleInCatalogue()} selects, for a single loaded listing. */
-	private static boolean isPublic(Equipment e) {
-		return e.getStatus() == EquipmentStatus.ACTIVE && e.getOwner().isActive() && !e.getPhotos().isEmpty();
 	}
 
 	private static BusinessRuleException rule(String key) {

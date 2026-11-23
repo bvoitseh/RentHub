@@ -1,15 +1,22 @@
 package com.bohakka.renthub.repository;
 
+import com.bohakka.renthub.entity.AvailabilityBlock;
+import com.bohakka.renthub.entity.Booking;
+import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.EquipmentPhoto;
 import com.bohakka.renthub.entity.EquipmentStatus;
 import com.bohakka.renthub.entity.GeoPoint;
 import com.bohakka.renthub.entity.OwnerType;
+import jakarta.persistence.criteria.AbstractQuery;
 import jakarta.persistence.criteria.CriteriaBuilder;
 import jakarta.persistence.criteria.Expression;
+import jakarta.persistence.criteria.Predicate;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -58,6 +65,71 @@ public final class EquipmentSpecifications {
 	public static Specification<Equipment> allowsDuration(int days) {
 		return (root, query, cb) -> cb.and(cb.lessThanOrEqualTo(root.get("minDays"), days),
 			cb.or(cb.isNull(root.get("maxDays")), cb.greaterThanOrEqualTo(root.get("maxDays"), days)));
+	}
+
+	/** FR-7 total-cost mode: {@code multiplier} = days × units, compared against the total price range. */
+	public static Specification<Equipment> totalAtLeast(BigDecimal min, long multiplier) {
+		return (root, query, cb) -> cb.greaterThanOrEqualTo(
+			cb.prod(root.<BigDecimal>get("pricePerDay"), BigDecimal.valueOf(multiplier)), min);
+	}
+
+	public static Specification<Equipment> totalAtMost(BigDecimal max, long multiplier) {
+		return (root, query, cb) -> cb.lessThanOrEqualTo(
+			cb.prod(root.<BigDecimal>get("pricePerDay"), BigDecimal.valueOf(multiplier)), max);
+	}
+
+	/**
+	 * FR-7, FR-9: {@code units} are free on every day of {@code [from, to]}: no block overlaps the period, and on no day
+	 * do the holding bookings (CONFIRMED, or NEW still within its FR-15b deadline: made after {@code requestsAfter}
+	 * and starting after {@code today}, D-39) plus {@code units} exceed the quantity. The busiest day of a period is its
+	 * first day or the first day of a booking starting inside it, so only those days are checked.
+	 */
+	public static Specification<Equipment> hasFreeUnits(int units, LocalDate from, LocalDate to, Instant requestsAfter,
+			LocalDate today) {
+		Holding holding = new Holding(requestsAfter, today);
+		return (root, query, cb) -> {
+			Subquery<Long> block = query.subquery(Long.class);
+			Root<AvailabilityBlock> b = block.from(AvailabilityBlock.class);
+			block.select(b.get("id")).where(cb.equal(b.get("equipment"), root),
+				cb.lessThanOrEqualTo(b.get("dateFrom"), to), cb.greaterThanOrEqualTo(b.get("dateTo"), from));
+
+			Subquery<Long> busyStart = query.subquery(Long.class);
+			Root<Booking> start = busyStart.from(Booking.class);
+			busyStart.select(start.get("id")).where(cb.equal(start.get("equipment"), root),
+				holding.of(cb, start), cb.greaterThan(start.get("dateFrom"), from),
+				cb.lessThanOrEqualTo(start.get("dateFrom"), to),
+				exceeds(cb, root, unitsOn(busyStart, cb, root, start.get("dateFrom"), holding), units));
+
+			return cb.and(cb.not(cb.exists(block)),
+				cb.not(exceeds(cb, root, unitsOn(query, cb, root, cb.literal(from), holding), units)),
+				cb.not(cb.exists(busyStart)));
+		};
+	}
+
+	/** Which bookings hold units: CONFIRMED, or NEW made after {@code requestsAfter} and starting after {@code today}. */
+	private record Holding(Instant requestsAfter, LocalDate today) {
+
+		Predicate of(CriteriaBuilder cb, Root<Booking> b) {
+			return cb.or(cb.equal(b.get("status"), BookingStatus.CONFIRMED),
+				cb.and(cb.equal(b.get("status"), BookingStatus.NEW), cb.greaterThan(b.get("createdAt"), requestsAfter),
+					cb.greaterThan(b.get("dateFrom"), today)));
+		}
+	}
+
+	/** Sum of units of the listing's holding bookings covering {@code day}. */
+	private static Subquery<Long> unitsOn(AbstractQuery<?> parent, CriteriaBuilder cb, Root<Equipment> root,
+			Expression<LocalDate> day, Holding holding) {
+		Subquery<Long> sum = parent.subquery(Long.class);
+		Root<Booking> b = sum.from(Booking.class);
+		sum.select(cb.sumAsLong(b.get("units"))).where(cb.equal(b.get("equipment"), root),
+			holding.of(cb, b), cb.lessThanOrEqualTo(b.get("dateFrom"), day),
+			cb.greaterThanOrEqualTo(b.get("dateTo"), day));
+		return sum;
+	}
+
+	private static Predicate exceeds(CriteriaBuilder cb, Root<Equipment> root, Subquery<Long> taken, int units) {
+		return cb.greaterThan(cb.sum(cb.coalesce(taken, 0L), (long) units),
+			root.<Integer>get("quantity").as(Long.class));
 	}
 
 	public static Specification<Equipment> hasUnits(int units) {

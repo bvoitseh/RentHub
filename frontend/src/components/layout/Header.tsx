@@ -27,9 +27,17 @@ export function Header() {
               {uk.catalog.nav}
             </NavLink>
             {user?.role === 'USER' && (
-              <NavLink to="/my/listings" className={navLinkClass}>
-                {uk.listings.nav}
-              </NavLink>
+              <>
+                <NavLink to="/my/bookings" className={navLinkClass}>
+                  {uk.booking.nav.mine}
+                </NavLink>
+                <NavLink to="/my/listings" className={navLinkClass}>
+                  {uk.listings.nav}
+                </NavLink>
+                <NavLink to="/my/requests" className={navLinkClass}>
+                  {uk.booking.nav.incoming}
+                </NavLink>
+              </>
             )}
           </nav>
         </div>

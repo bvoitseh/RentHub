@@ -48,6 +48,8 @@ export const router = createBrowserRouter([
       protectedRoute('profile', async () => (await import('@/pages/ProfilePage')).ProfilePage),
       protectedRoute('my/listings', async () => (await import('@/pages/MyListingsPage')).MyListingsPage),
       protectedRoute('my/listings/new', async () => (await import('@/pages/ListingCreatePage')).ListingCreatePage),
+      protectedRoute('my/bookings', async () => (await import('@/pages/MyBookingsPage')).MyBookingsPage),
+      protectedRoute('my/requests', async () => (await import('@/pages/IncomingBookingsPage')).IncomingBookingsPage),
       protectedRoute('my/listings/:id/edit', async () => (await import('@/pages/ListingEditPage')).ListingEditPage),
       { path: '*', Component: NotFoundPage },
     ],

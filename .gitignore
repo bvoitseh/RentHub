@@ -37,3 +37,7 @@ Thumbs.db
 # Logs
 *.log
 npm-debug.log*
+
+# Local UI test plan and report for the browser agent (not part of the project)
+UI_TEST_SCENARIOS.md
+UI_TEST_REPORT.md

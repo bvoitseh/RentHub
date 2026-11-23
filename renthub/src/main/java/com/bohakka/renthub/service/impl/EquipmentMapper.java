@@ -8,6 +8,7 @@ import com.bohakka.renthub.dto.PhotoResponse;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.service.ObjectStorage;
+import java.math.BigDecimal;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,11 +26,11 @@ public class EquipmentMapper {
 			owner.getCompanyName(), null, 0);
 	}
 
-	public EquipmentSummaryResponse summary(Equipment e, String coverKey, Double distanceKm) {
+	public EquipmentSummaryResponse summary(Equipment e, String coverKey, Double distanceKm, BigDecimal totalPrice) {
 		return new EquipmentSummaryResponse(e.getId(), e.getTitle(), e.getPricePerDay(), e.getCategory().getName(),
 			e.getAddress(), coverKey == null ? null : storage.publicUrl(coverKey), e.getQuantity(), e.getMinDays(),
 			e.getMaxDays(), e.isPickupAvailable(), e.isDeliveryAvailable(), e.getStatus(), owner(e.getOwner()),
-			distanceKm);
+			distanceKm, totalPrice);
 	}
 
 	public EquipmentDetailsResponse details(Equipment e, Long viewerId) {
