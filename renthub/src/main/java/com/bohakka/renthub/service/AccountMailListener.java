@@ -6,7 +6,6 @@ import com.bohakka.renthub.dto.EmailMessage;
 import com.bohakka.renthub.event.PasswordResetEmailRequested;
 import com.bohakka.renthub.event.VerificationEmailRequested;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSource;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -14,14 +13,14 @@ import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * Sends account e-mails after the publishing transaction commits, on the async pool, so a slow or dead SMTP
- * server never blocks or fails the request. Texts come from messages_uk.properties.
+ * server never blocks or fails the request; failed sends are retried by {@link MailDelivery}. Texts come from
+ * messages_uk.properties.
  */
-@Slf4j
 @Component
 @RequiredArgsConstructor
 public class AccountMailListener {
 
-	private final MailGateway mail;
+	private final MailDelivery delivery;
 	private final MessageSource messages;
 	private final AppProperties app;
 
@@ -37,12 +36,10 @@ public class AccountMailListener {
 		send(event.email(), "mail.reset", event.name(), link("/reset-password", event.rawToken()));
 	}
 
+	/** Retries and failure logging are the delivery's job (D-41); logs name the template, never the address. */
 	private void send(String to, String keyPrefix, Object... bodyArgs) {
-		try {
-			mail.send(new EmailMessage(to, text(keyPrefix + ".subject"), text(keyPrefix + ".body", bodyArgs)));
-		} catch (RuntimeException ex) {
-			log.error("Failed to send '{}' e-mail to {}", keyPrefix, to, ex);
-		}
+		delivery.deliver(new EmailMessage(to, text(keyPrefix + ".subject"), text(keyPrefix + ".body", bodyArgs)),
+			keyPrefix);
 	}
 
 	private String text(String key, Object... args) {

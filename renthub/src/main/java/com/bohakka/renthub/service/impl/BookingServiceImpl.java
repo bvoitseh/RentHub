@@ -8,6 +8,7 @@ import com.bohakka.renthub.entity.CommissionRate;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
+import com.bohakka.renthub.event.BookingNoticeType;
 import com.bohakka.renthub.exception.BusinessRuleException;
 import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.exception.ForbiddenException;
@@ -18,6 +19,7 @@ import com.bohakka.renthub.repository.CommissionRateRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.repository.UserRepository;
 import com.bohakka.renthub.service.AvailabilityService;
+import com.bohakka.renthub.service.BookingNotifier;
 import com.bohakka.renthub.service.BookingService;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -44,6 +46,7 @@ public class BookingServiceImpl implements BookingService {
 	private final AvailabilityService availability;
 	private final BookingDeadline deadline;
 	private final BookingMapper mapper;
+	private final BookingNotifier notifier;
 	private final BookingProperties properties;
 	private final Clock clock;
 
@@ -76,7 +79,9 @@ public class BookingServiceImpl implements BookingService {
 			.orElseThrow(() -> new IllegalStateException("No commission rate in force"));
 		Booking booking = new Booking(listing, renter, request.units(), period, request.handover(), rate,
 			clock.instant());
-		return mapper.toResponse(bookings.save(booking));
+		bookings.save(booking);
+		notifier.notify(booking, BookingNoticeType.REQUESTED);
+		return mapper.toResponse(booking);
 	}
 
 	/** Lock order: listing first (fresh, so {@code isPublic()} is current), then the booking row (FR-11, FR-14). */
@@ -97,6 +102,7 @@ public class BookingServiceImpl implements BookingService {
 		}
 		availability.assertFree(listing, booking.getUnits(), booking.period(), booking.getId());
 		booking.confirm(ownerId, clock.instant());
+		notifier.notify(booking, BookingNoticeType.CONFIRMED);
 		return mapper.toResponse(booking);
 	}
 
@@ -107,8 +113,10 @@ public class BookingServiceImpl implements BookingService {
 		Booking booking = bookings.lockById(bookingId).orElseThrow(BookingServiceImpl::notFound);
 		if (booking.isOwner(ownerId) && deadline.hasPassed(booking)) {
 			booking.expire(clock.instant());
+			notifier.notify(booking, BookingNoticeType.EXPIRED);
 		} else {
 			booking.reject(ownerId, clock.instant());
+			notifier.notify(booking, BookingNoticeType.REJECTED);
 		}
 		return mapper.toResponse(booking);
 	}
@@ -120,8 +128,10 @@ public class BookingServiceImpl implements BookingService {
 		LocalDate today = LocalDate.now(clock);
 		if (booking.isRenter(userId)) {
 			booking.cancelByRenter(userId, today, clock.instant());
+			notifier.notify(booking, BookingNoticeType.CANCELLED_BY_RENTER);
 		} else {
 			booking.cancelByOwner(userId, reason, today, clock.instant());
+			notifier.notify(booking, BookingNoticeType.CANCELLED_BY_OWNER);
 		}
 		return mapper.toResponse(booking);
 	}
