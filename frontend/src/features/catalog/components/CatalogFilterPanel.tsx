@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Checkbox } from '@/components/ui/Checkbox'
 import { FormField } from '@/components/ui/FormField'
@@ -21,7 +20,8 @@ const FIELDS = ['categoryId', 'priceMin', 'priceMax', 'dateFrom', 'dateTo', 'uni
 
 /**
  * FR-7 filters, applied automatically as they change. Half-filled pairs (one date only, min price above max) keep the
- * previous values until they are valid. The form is uncontrolled and re-created only on reset, so typing keeps focus.
+ * previous values until they are valid. The form is uncontrolled, so typing keeps focus; reset empties the fields in
+ * place. The category select is re-created once the categories arrive, so a category from the URL is shown selected.
  */
 export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterPanelProps) {
   const { data: categories = [] } = useCategories()
@@ -44,7 +44,17 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
     onApply(changes)
   }
   const onChange = useAutoApply(submit)
-  const [version, setVersion] = useState(0)
+
+  /** Empties every field in place; the form is not re-created, so it cannot pick up the old URL values again. */
+  const reset = (form: HTMLFormElement | null) => {
+    for (const element of Array.from(form?.elements ?? [])) {
+      if (element instanceof HTMLInputElement) {
+        if (element.type === 'checkbox') element.checked = false
+        else element.value = ''
+      } else if (element instanceof HTMLSelectElement) element.value = ''
+    }
+    onReset()
+  }
 
   const number = (name: 'priceMin' | 'priceMax' | 'units', label: string, min: number) => (
     <FormField label={label} htmlFor={`f-${name}`}>
@@ -54,7 +64,6 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
 
   return (
     <form
-      key={version}
       className="flex flex-col gap-1"
       onChange={onChange}
       onSubmit={(event) => {
@@ -65,6 +74,7 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
       <h2 className="mb-2 text-base font-semibold text-slate-900">{t.title}</h2>
       <FormField label={t.category} htmlFor="f-categoryId">
         <Select
+          key={categories.length}
           id="f-categoryId"
           name="categoryId"
           defaultValue={filters.categoryId ?? ''}
@@ -101,13 +111,7 @@ export function CatalogFilterPanel({ filters, onApply, onReset }: CatalogFilterP
         <Checkbox id="f-pickup" name="pickup" label={t.pickup} defaultChecked={filters.pickup === 'true'} />
         <Checkbox id="f-delivery" name="delivery" label={t.delivery} defaultChecked={filters.delivery === 'true'} />
       </div>
-      <Button
-        variant="secondary"
-        onClick={() => {
-          onReset()
-          setVersion((v) => v + 1)
-        }}
-      >
+      <Button variant="secondary" onClick={(event) => reset(event.currentTarget.form)}>
         {t.reset}
       </Button>
     </form>

@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import type { UseFormReturn } from 'react-hook-form'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
@@ -13,6 +14,13 @@ const textarea =
 /** Title, description, category, condition (FR-4). */
 export function ListingBasicsFields({ form }: { form: UseFormReturn<ListingInput> }) {
   const { data: categories = [] } = useCategories()
+  const { getValues, setValue } = form
+
+  // The select is registered before the categories load, when only "—" exists, so the browser shows "—" although the
+  // form holds the listing's category. Writing the same value again once the options exist selects it on screen.
+  useEffect(() => {
+    if (categories.length > 0) setValue('categoryId', getValues('categoryId'))
+  }, [categories.length, getValues, setValue])
   const { errors } = form.formState
   const conditions = Object.entries(uk.catalog.conditions).map(([value, label]) => ({ value, label }))
 
