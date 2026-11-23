@@ -48,7 +48,11 @@ export function BookingRow({ booking: b, party, actions }: BookingRowProps) {
             <span className="ml-2 font-normal text-slate-500">{t.list.commission(formatPrice(b.commission))}</span>
           )}
         </p>
-        {b.respondBy && <p className="text-amber-800">{t.list.respondBy(formatDateTime(b.respondBy))}</p>}
+        {b.respondBy && (
+          <p className="text-amber-800">
+            {(party === 'renter' ? t.list.respondBy : t.list.ownerRespondsBy)(formatDateTime(b.respondBy))}
+          </p>
+        )}
         {b.cancelReason && (
           <p className="text-slate-600">
             {t.list.reason}: {b.cancelReason}

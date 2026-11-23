@@ -31,12 +31,12 @@ export function AvailabilityCalendar({ equipmentId, units, range, minDate, onPic
   const last = range?.to ?? range?.from
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex w-full max-w-md flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
         <Button variant="ghost" aria-label={t.prev} disabled={month <= thisMonth} onClick={() => setMonth(shiftMonth(month, -1))}>
           ←
         </Button>
-        <p className="flex items-center gap-2 font-medium capitalize text-slate-900">
+        <p className="flex items-center gap-2 font-medium text-slate-900">
           {formatMonthTitle(month)} {isFetching && <Spinner size="sm" />}
         </p>
         <Button variant="ghost" aria-label={t.next} onClick={() => setMonth(shiftMonth(month, 1))}>

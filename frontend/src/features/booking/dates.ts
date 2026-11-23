@@ -54,8 +54,11 @@ const dateTimeFormat = new Intl.DateTimeFormat('uk-UA', { day: 'numeric', month:
 
 /** "21 лист. 2026 р." */
 export const formatDate = (iso: string) => dateFormat.format(fromIso(iso))
-/** "листопад 2026 р." */
-export const formatMonthTitle = (monthStart: string) => monthFormat.format(fromIso(monthStart))
+/** "Листопад 2026 р." — only the first letter capitalised (CSS `capitalize` would also give "Р."). */
+export const formatMonthTitle = (monthStart: string) => {
+  const title = monthFormat.format(fromIso(monthStart))
+  return title.charAt(0).toUpperCase() + title.slice(1)
+}
 /** For instants (e.g. the response deadline). */
 export const formatDateTime = (instant: string) => dateTimeFormat.format(new Date(instant))
 /** "21 лист. 2026 р. — 23 лист. 2026 р." or one date for a single day. */

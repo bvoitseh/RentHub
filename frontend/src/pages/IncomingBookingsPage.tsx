@@ -20,7 +20,7 @@ export function IncomingBookingsPage() {
         <h1 className="text-2xl font-bold text-slate-900">{t.list.incomingTitle}</h1>
         <Select
           aria-label={uk.catalog.filters.title}
-          className="w-auto"
+          className="sm:w-56"
           value={status ?? ''}
           placeholder={t.list.all}
           options={statuses.map((s) => ({ value: s, label: t.statuses[s] }))}

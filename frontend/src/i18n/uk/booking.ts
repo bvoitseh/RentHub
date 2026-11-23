@@ -56,6 +56,7 @@ export const booking = {
     renter: 'Орендар',
     owner: 'Власник',
     respondBy: (when: string) => `Відповісти до ${when}`,
+    ownerRespondsBy: (when: string) => `Власник відповість до ${when}`,
     units: (n: number) => `${n} од.`,
     commission: (v: string) => `Комісія платформи: ${v}`,
     reason: 'Причина',
@@ -72,6 +73,7 @@ export const booking = {
     cancelReasonHint: 'Від 10 до 500 символів',
     rejectTitle: 'Відхилити запит?',
     rejectText: 'Орендар побачить, що запит відхилено.',
+    activeBookings: 'Активні бронювання:',
   },
   contact: { title: 'Контакти', phone: 'Телефон', show: 'Показати контакти' },
   blocks: {

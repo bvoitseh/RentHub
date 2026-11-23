@@ -48,6 +48,7 @@ export function BookingActions({ booking, as }: { booking: Booking; as: 'owner' 
         title={t.rejectTitle}
         text={t.rejectText}
         confirmLabel={t.reject}
+        cancelLabel={t.back}
         danger
         loading={reject.isPending}
         onConfirm={() => reject.mutate(booking.id, { onSettled: () => setDialog(null) })}
