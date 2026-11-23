@@ -62,7 +62,8 @@ public class AccountServiceImpl implements AccountService {
 	@Override
 	@Transactional
 	public void deactivate(Long userId, String password, HttpServletRequest http) {
-		User user = get(userId);
+		User user = users.lockById(userId)
+			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
 		if (!passwordEncoder.matches(password, user.getPasswordHash())) {
 			throw new ForbiddenException("user.wrong_password", "user.wrong_password");
 		}
@@ -74,7 +75,7 @@ public class AccountServiceImpl implements AccountService {
 
 	/**
 	 * FR-3c forbids deactivation while the user has NEW or CONFIRMED bookings with dateTo >= today, as renter or owner;
-	 * the 409 lists them.
+	 * the 409 lists them. The user row is locked first; booking requests lock it too, so none can slip in between.
 	 */
 	private void assertNoActiveBookings(User user) {
 		List<Booking> active = bookings.findActiveForUser(user.getId(), BookingStatus.HOLDING_UNITS, LocalDate.now(clock));

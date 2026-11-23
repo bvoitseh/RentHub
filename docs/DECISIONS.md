@@ -314,4 +314,9 @@ confirmed; (3) the renter's cancel needs no reason, the owner's needs 10–500 c
 (6) the jobs run by cron in Europe/Kyiv — completion daily at 00:05, expiry hourly — so a request whose first day
 arrives expires within an hour after midnight; (7) e-mail notifications (FR-15a) come with `feature/notifications`,
 automatic cancellation on admin block (FR-20) with moderation; (8) deleting a listing (allowed only without bookings)
-also deletes its calendar blocks.
+also deletes its calendar blocks; (9) row locks (`PESSIMISTIC_WRITE`) are always taken in one order — listing, then
+users by ascending id, then booking — by booking create (listing, renter, owner), confirm (listing, booking),
+reject/cancel and the scheduler jobs (booking), listing edit/archive and block creation (listing) and deactivation
+(user), so concurrent decisions cannot overwrite each other and FR-3c/FR-5 checks cannot be bypassed; (10) a NEW
+request whose FR-15b deadline has passed stops holding units at once (calendar, catalogue, requests, blocks), and an
+owner's rejection after the deadline is recorded as expired.

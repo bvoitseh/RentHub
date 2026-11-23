@@ -10,8 +10,11 @@ export function fromIso(iso: string): Date {
   return new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
 }
 
+/** "Today" is the business date in Europe/Kyiv, as on the server, wherever the browser is. */
+const kyivDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Kyiv', year: 'numeric', month: '2-digit', day: '2-digit' })
+
 export function todayIso(): string {
-  return toIso(new Date())
+  return kyivDate.format(new Date())
 }
 
 export function addDays(iso: string, days: number): string {

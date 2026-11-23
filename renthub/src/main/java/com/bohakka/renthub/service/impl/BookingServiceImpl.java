@@ -21,6 +21,8 @@ import com.bohakka.renthub.service.AvailabilityService;
 import com.bohakka.renthub.service.BookingService;
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.List;
+import java.util.TreeSet;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,7 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * {@link BookingService}. Creating and confirming a booking run in one transaction that first locks the listing row and
  * then re-checks the free units (FR-11), so parallel requests for the same days are serialised and the excess ones get
- * 409. Pending requests hold their units too (D-39).
+ * 409. Pending requests hold their units too (D-39). Row locks are always taken in the order listing → users
+ * (ascending id) → booking, so concurrent use cases cannot deadlock or overwrite each other (D-40).
  */
 @Service
 @RequiredArgsConstructor
@@ -44,15 +47,25 @@ public class BookingServiceImpl implements BookingService {
 	private final BookingProperties properties;
 	private final Clock clock;
 
+	/** Locks the listing, then renter and owner by ascending id (FR-3c), so every check below reads current rows. */
 	@Override
 	@Transactional
 	public BookingResponse create(Long renterId, BookingRequest request) {
-		User renter = users.findById(renterId)
-			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
-		assertMayBook(renter);
 		Equipment listing = equipment.lockById(request.equipmentId())
-			.filter(Equipment::isPublic)
 			.orElseThrow(() -> new NotFoundException("equipment.not_found", "equipment.not_found"));
+		Long ownerId = listing.getOwner().getId();
+		User renter = null;
+		for (Long userId : new TreeSet<>(List.of(renterId, ownerId))) {
+			User locked = users.lockById(userId)
+				.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
+			if (userId.equals(renterId)) {
+				renter = locked;
+			}
+		}
+		assertMayBook(renter);
+		if (!listing.isPublic()) {
+			throw new NotFoundException("equipment.not_found", "equipment.not_found");
+		}
 		if (listing.isOwnedBy(renterId)) {
 			throw rule("booking.own_equipment");
 		}
@@ -66,14 +79,16 @@ public class BookingServiceImpl implements BookingService {
 		return mapper.toResponse(bookings.save(booking));
 	}
 
+	/** Lock order: listing first (fresh, so {@code isPublic()} is current), then the booking row (FR-11, FR-14). */
 	@Override
 	@Transactional
 	public BookingResponse confirm(Long ownerId, Long bookingId) {
-		Booking booking = find(bookingId);
+		Long equipmentId = bookings.findEquipmentIdById(bookingId).orElseThrow(BookingServiceImpl::notFound);
+		Equipment listing = equipment.lockById(equipmentId).orElseThrow(BookingServiceImpl::notFound);
+		Booking booking = bookings.lockById(bookingId).orElseThrow(BookingServiceImpl::notFound);
 		if (!booking.isOwner(ownerId)) {
 			throw new ForbiddenException("booking.not_participant", "booking.not_participant");
 		}
-		Equipment listing = equipment.lockById(booking.getEquipment().getId()).orElseThrow();
 		if (deadline.hasPassed(booking)) {
 			throw new ConflictException("booking.expired", "booking.expired");
 		}
@@ -85,18 +100,23 @@ public class BookingServiceImpl implements BookingService {
 		return mapper.toResponse(booking);
 	}
 
+	/** FR-12; a request whose FR-15b deadline has passed is recorded as expired, not as the owner's rejection. */
 	@Override
 	@Transactional
 	public BookingResponse reject(Long ownerId, Long bookingId) {
-		Booking booking = find(bookingId);
-		booking.reject(ownerId, clock.instant());
+		Booking booking = bookings.lockById(bookingId).orElseThrow(BookingServiceImpl::notFound);
+		if (booking.isOwner(ownerId) && deadline.hasPassed(booking)) {
+			booking.expire(clock.instant());
+		} else {
+			booking.reject(ownerId, clock.instant());
+		}
 		return mapper.toResponse(booking);
 	}
 
 	@Override
 	@Transactional
 	public BookingResponse cancel(Long userId, Long bookingId, String reason) {
-		Booking booking = find(bookingId);
+		Booking booking = bookings.lockById(bookingId).orElseThrow(BookingServiceImpl::notFound);
 		LocalDate today = LocalDate.now(clock);
 		if (booking.isRenter(userId)) {
 			booking.cancelByRenter(userId, today, clock.instant());
@@ -138,9 +158,8 @@ public class BookingServiceImpl implements BookingService {
 		}
 	}
 
-	private Booking find(Long bookingId) {
-		return bookings.findWithPartiesById(bookingId)
-			.orElseThrow(() -> new NotFoundException("booking.not_found", "booking.not_found"));
+	private static NotFoundException notFound() {
+		return new NotFoundException("booking.not_found", "booking.not_found");
 	}
 
 	private static BusinessRuleException rule(String key, Object... args) {

@@ -38,6 +38,7 @@ public class AvailabilityBlockServiceImpl implements AvailabilityBlockService {
 	private final BookingRepository bookings;
 	private final EquipmentAccess access;
 	private final BookingProperties properties;
+	private final BookingDeadline deadline;
 	private final Clock clock;
 
 	@Override
@@ -61,7 +62,7 @@ public class AvailabilityBlockServiceImpl implements AvailabilityBlockService {
 			throw new ConflictException("block.overlaps", "block.overlaps");
 		}
 		List<Booking> held = bookings.findOverlapping(equipmentId, BookingStatus.HOLDING_UNITS, period.from(),
-			period.to());
+			period.to()).stream().filter(b -> !deadline.hasPassed(b)).toList();
 		if (!held.isEmpty()) {
 			throw new ConflictException("block.has_bookings", "block.has_bookings")
 				.withProperty("bookings", held.stream().map(BookingRef::of).toList());

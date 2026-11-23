@@ -61,7 +61,8 @@ the start, the owner with a 10–500 character reason) and fix price, total and 
 bookings (D-39) and the blocks. `BookingServiceImpl` creates and confirms inside one transaction that first takes the
 listing's pessimistic write lock (`EquipmentRepository.lockById`, `SELECT … FOR UPDATE`) and then re-checks
 availability (FR-11), so parallel requests are serialised and the excess one gets `409 booking.unavailable` with the
-days. Block creation takes the same lock. `BookingQueryServiceImpl` serves the lists and the FR-3b contact rule.
+days. Block creation and listing edits take the same lock; every booking status change locks the booking row, and
+locks are always taken in the order listing → users → booking (D-40). `BookingQueryServiceImpl` serves the lists and the FR-3b contact rule.
 
 **Where business rules will live:** season logic and rating in their services; entity methods guard their own invariants.
 

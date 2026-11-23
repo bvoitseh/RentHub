@@ -65,6 +65,7 @@ public class ListingServiceImpl implements ListingService {
 	@Override
 	@Transactional
 	public EquipmentDetailsResponse update(Long ownerId, Long equipmentId, EquipmentRequest request) {
+		lock(equipmentId);
 		Equipment listing = access.owned(ownerId, equipmentId);
 		RentalTerms terms = terms(request);
 		if (terms.differsInFrozenTerms(listing.terms())) {
@@ -80,6 +81,7 @@ public class ListingServiceImpl implements ListingService {
 	@Override
 	@Transactional
 	public EquipmentDetailsResponse archive(Long ownerId, Long equipmentId) {
+		lock(equipmentId);
 		Equipment listing = access.owned(ownerId, equipmentId);
 		listing.archive(clock.instant());
 		return mapper.details(listing, ownerId);
@@ -104,6 +106,15 @@ public class ListingServiceImpl implements ListingService {
 		Map<Long, String> covers = photos.findCovers(mine.stream().map(Equipment::getId).toList()).stream()
 			.collect(Collectors.toMap(p -> p.getEquipment().getId(), EquipmentPhoto::getStorageKey));
 		return mine.stream().map(e -> mapper.summary(e, covers.get(e.getId()), null, null)).toList();
+	}
+
+	/**
+	 * FR-5, FR-11: the listing row lock that booking requests and confirmations also take, so the frozen-terms check
+	 * and the change it allows cannot interleave with a new booking. Taken before the listing is first loaded.
+	 */
+	private void lock(Long equipmentId) {
+		equipment.lockById(equipmentId)
+			.orElseThrow(() -> new NotFoundException("equipment.not_found", "equipment.not_found"));
 	}
 
 	private Category category(Long categoryId) {

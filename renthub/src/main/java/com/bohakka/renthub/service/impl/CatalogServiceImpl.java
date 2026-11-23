@@ -25,6 +25,7 @@ import com.bohakka.renthub.entity.EquipmentPhoto;
 import com.bohakka.renthub.entity.GeoPoint;
 import com.bohakka.renthub.exception.BusinessRuleException;
 import com.bohakka.renthub.exception.NotFoundException;
+import com.bohakka.renthub.properties.BookingProperties;
 import com.bohakka.renthub.repository.EquipmentPhotoRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.service.CatalogService;
@@ -52,6 +53,7 @@ public class CatalogServiceImpl implements CatalogService {
 	private final EquipmentRepository equipment;
 	private final EquipmentPhotoRepository photos;
 	private final EquipmentMapper mapper;
+	private final BookingProperties bookingProperties;
 	private final Clock clock;
 
 	@Override
@@ -111,7 +113,8 @@ public class CatalogServiceImpl implements CatalogService {
 			spec = spec.and(hasUnits(units));
 		}
 		if (days != null) {
-			spec = spec.and(allowsDuration(days)).and(hasFreeUnits(units, query.dateFrom(), query.dateTo()));
+			spec = spec.and(allowsDuration(days)).and(hasFreeUnits(units, query.dateFrom(), query.dateTo(),
+				clock.instant().minus(bookingProperties.requestTtl()), LocalDate.now(clock)));
 		}
 		if (point != null && query.radiusKm() != null) {
 			spec = spec.and(withinKm(point, query.radiusKm()));

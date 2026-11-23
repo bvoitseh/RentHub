@@ -23,7 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * {@link AvailabilityService}. Units are held by NEW and CONFIRMED bookings (D-39); a block closes the whole listing.
+ * {@link AvailabilityService}. Units are held by CONFIRMED bookings and by NEW requests whose FR-15b deadline has not
+ * passed (D-39), even before the hourly job marks them expired; a block closes the whole listing.
  * The calendar window is limited to the booking horizon, which keeps the per-day computation small (NFR-1).
  */
 @Service
@@ -34,6 +35,7 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 	private final BookingRepository bookings;
 	private final AvailabilityBlockRepository blocks;
 	private final BookingProperties properties;
+	private final BookingDeadline deadline;
 	private final Clock clock;
 
 	@Override
@@ -69,7 +71,7 @@ public class AvailabilityServiceImpl implements AvailabilityService {
 			.map(AvailabilityBlock::period).toList();
 		List<Booking> holding = bookings.findOverlapping(listing.getId(), BookingStatus.HOLDING_UNITS, window.from(),
 				window.to()).stream()
-			.filter(b -> !b.getId().equals(ignoredBookingId))
+			.filter(b -> !b.getId().equals(ignoredBookingId) && !deadline.hasPassed(b))
 			.toList();
 		return new AvailabilityCalendar(listing.getQuantity(), closed, holding);
 	}
