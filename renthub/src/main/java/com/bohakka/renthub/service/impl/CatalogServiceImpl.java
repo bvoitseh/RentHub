@@ -48,7 +48,8 @@ import org.springframework.util.StringUtils;
 @RequiredArgsConstructor
 public class CatalogServiceImpl implements CatalogService {
 
-	private static final int DEFAULT_PAGE_SIZE = 12;
+	/** FR-7: "pagination with a fixed page size (default 20)". */
+	private static final int DEFAULT_PAGE_SIZE = 20;
 
 	private final EquipmentRepository equipment;
 	private final EquipmentPhotoRepository photos;
@@ -59,8 +60,8 @@ public class CatalogServiceImpl implements CatalogService {
 	@Override
 	@Transactional(readOnly = true)
 	public PageResponse<EquipmentSummaryResponse> search(CatalogQuery query) {
-		CatalogSort sort = CatalogSort.parse(query.sort());
 		GeoPoint point = point(query);
+		CatalogSort sort = CatalogSort.parse(query.sort(), point != null);
 		if (point == null && (query.radiusKm() != null || sort == CatalogSort.DISTANCE)) {
 			throw rule("catalog.point_required");
 		}

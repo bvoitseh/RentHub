@@ -13,7 +13,8 @@ import java.time.LocalDate;
 /**
  * FR-7 catalogue query string: keywords, category, price range, rental dates, units, distance from a point,
  * handover options, owner type; {@code sort} is one of {@code price,asc}, {@code price,desc}, {@code distance},
- * {@code rating} (newest first when omitted); {@code page} is 0-based.
+ * {@code rating}, {@code newest}; when omitted: distance if lat/lon are given, otherwise price ascending (FR-7);
+ * {@code page} is 0-based, {@code size} defaults to 20.
  */
 public record CatalogQuery(
 		@Size(max = 100) String q,
