@@ -39,6 +39,11 @@ export function Header() {
                 </NavLink>
               </>
             )}
+            {user?.role === 'ADMIN' && (
+              <NavLink to="/admin" className={navLinkClass}>
+                {uk.admin.nav}
+              </NavLink>
+            )}
           </nav>
         </div>
         <UserMenu />

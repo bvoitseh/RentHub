@@ -14,6 +14,9 @@ public interface BookingNotifier {
 	/** A booking change with a fixed recipient side (every type except the review ones). */
 	void notify(Booking booking, BookingNoticeType type);
 
+	/** FR-20: tells one side ({@code toOwner}) that the admin cancelled the booking, with the reason. */
+	void adminCancelled(Booking booking, boolean toOwner);
+
 	/** FR-18: both sides are invited to review the completed rental until {@code reviewUntil}. */
 	void remindToReview(Booking booking, Instant reviewUntil);
 

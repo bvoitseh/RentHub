@@ -31,9 +31,9 @@ New features add classes to these packages; a new package is created only for a 
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`), `StorageProperties` (`app.storage.*`), `GeocodingProperties` (`app.geocoding.*`), `BookingProperties` (`app.booking.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`) |
 | `dto` | request/response records (`RegisterRequest`, `UserResponse`, `EquipmentRequest`, `CatalogQuery`, `EquipmentSummaryResponse`, `EquipmentDetailsResponse`, `PageResponse`, `PublicProfileResponse`, `BookingRequest`, `BookingResponse`, `AvailabilityResponse`, `BookingRef`, `ContactResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
+| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), `Complaint` (+ `ComplaintStatus`, FR-21), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
 | `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `ComplaintService`, `ModerationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
 | `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
@@ -52,7 +52,7 @@ bytes (JPEG/PNG/WebP, ≤ 5 MB), stored under `equipment/{id}/{uuid}.{ext}`, and
 after the commit (or after a rollback for a fresh upload). With rental dates the catalogue keeps only listings with
 the units free on every day (`hasFreeUnits`: no overlapping block, and the busiest day — the period's first day or a
 booking's first day inside it — has room) and the price range and card price refer to the total cost. FR-5 checks use
-the bookings. Not yet: ratings and complaint counters (D-32).
+the bookings. Profile counters: ratings (FR-19) and complaints without rejected ones (FR-21).
 
 **Availability and booking (FR-8…FR-15b) in short:** `BookingStatus` is the one place listing which status may follow
 which (FR-14); `Booking`'s methods check who may act and when (owner confirms/rejects, renter or owner cancels before
@@ -78,6 +78,12 @@ else the geocoded profile city, else the start city from `app.recommendations.*`
 queries public listings within the radius, not the viewer's own, ordered by
 `EquipmentSpecifications.nearestThenSeason` (distance, in season via `Category.isInSeason`, rating, newest; D-44).
 
+**Complaints and moderation (FR-20–FR-22) in short:** `ComplaintServiceImpl` files a complaint about one booking or
+listing (verified e-mail, one open per subject); `ModerationServiceImpl` (behind `AdminController`, `@PreAuthorize`
+ADMIN) decides complaints and blocks/unblocks users and listings: `User.block`, `Equipment.block/unblock`, and
+`Booking.cancelByAdmin` for every future NEW/CONFIRMED booking, then `BookingNotifier.adminCancelled` e-mails the
+other side (D-45).
+
 **Where business rules live:** entity methods guard their own invariants; services orchestrate use cases.
 
 **Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
@@ -94,7 +100,7 @@ H2 console). Login is a REST endpoint: `LoginService` authenticates through `Aut
 (`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
 (so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
-a user (password reset, deactivation, later admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
+a user (password reset, deactivation, admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
 Logout is Spring Security's filter at `POST /api/v1/auth/logout` (204). Rate limits (NFR-14) are enforced in the
 services via `RateLimiter`, keyed per IP and per e-mail, stored through Spring Data Redis repositories: `RateLimitAttempts` (counter whose TTL
 starts with the first attempt and is read back on load) and `RateLimitBlock` (created when the limit is reached, TTL =
@@ -164,6 +170,9 @@ src/
                      ReviewCard, ReplyForm, BookingReviews in booking rows, UserReviews on profiles and the card)
 └─ features/recommendations/ types.ts · api · hooks/useRecommendations · components/ (Recommendations on the home
                      page, RecommendationCard with the «Сезон» badge, LocationControl)
+└─ features/complaints/ ComplaintButton + ComplaintDialog (on the equipment card and in booking rows)
+└─ features/admin/ api · hooks/useAdmin · components/ (AdminComplaints + ComplaintRow, AdminUsers, AdminEquipment,
+                     AdminList, AdminSearch, BlockToggle); pages/AdminPage with tabs at /admin/:tab (ADMIN only)
 ```
 
 Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via

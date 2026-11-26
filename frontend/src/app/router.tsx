@@ -2,11 +2,12 @@ import type { ComponentType } from 'react'
 import { createBrowserRouter } from 'react-router'
 import { AppLayout } from '@/components/layout/AppLayout'
 import { RequireAuth } from '@/features/auth/components/RequireAuth'
+import type { Role } from '@/features/auth/types'
 import { HomePage } from '@/pages/HomePage'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 
 /** Lazy route whose page renders only for logged-in users (guests are sent to /login and back). */
-function protectedRoute(path: string, load: () => Promise<ComponentType>) {
+function protectedRoute(path: string, load: () => Promise<ComponentType>, roles?: Role[]) {
   return {
     path,
     lazy: {
@@ -14,7 +15,7 @@ function protectedRoute(path: string, load: () => Promise<ComponentType>) {
         const Page = await load()
         return function ProtectedPage() {
           return (
-            <RequireAuth>
+            <RequireAuth roles={roles}>
               <Page />
             </RequireAuth>
           )
@@ -51,6 +52,7 @@ export const router = createBrowserRouter([
       protectedRoute('my/bookings', async () => (await import('@/pages/MyBookingsPage')).MyBookingsPage),
       protectedRoute('my/requests', async () => (await import('@/pages/IncomingBookingsPage')).IncomingBookingsPage),
       protectedRoute('my/listings/:id/edit', async () => (await import('@/pages/ListingEditPage')).ListingEditPage),
+      protectedRoute('admin/:tab?', async () => (await import('@/pages/AdminPage')).AdminPage, ['ADMIN']),
       { path: '*', Component: NotFoundPage },
     ],
   },

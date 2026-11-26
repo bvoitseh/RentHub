@@ -153,6 +153,15 @@ public class User {
 		this.ratingAvg = BigDecimal.valueOf(ratingSum).divide(BigDecimal.valueOf(reviewCount), 2, RoundingMode.HALF_UP);
 	}
 
+	/** FR-20: an admin block; the user cannot log in until unblocked. */
+	public void block() {
+		this.blocked = true;
+	}
+
+	public void unblock() {
+		this.blocked = false;
+	}
+
 	/** Whether the account may log in and act (not blocked by an admin). */
 	public boolean isActive() {
 		return !blocked && !isDeactivated();

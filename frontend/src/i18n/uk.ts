@@ -1,6 +1,8 @@
+import { admin } from '@/i18n/uk/admin'
 import { auth } from '@/i18n/uk/auth'
 import { booking } from '@/i18n/uk/booking'
 import { catalog } from '@/i18n/uk/catalog'
+import { complaints } from '@/i18n/uk/complaints'
 import { listings } from '@/i18n/uk/listings'
 import { profile } from '@/i18n/uk/profile'
 import { recommendations } from '@/i18n/uk/recommendations'
@@ -39,9 +41,11 @@ export const uk = {
     errorNetwork: 'Немає з’єднання із сервером. Перевірте мережу та спробуйте ще раз.',
     or: 'або',
   },
+  admin,
   auth,
   booking,
   catalog,
+  complaints,
   listings,
   profile,
   recommendations,

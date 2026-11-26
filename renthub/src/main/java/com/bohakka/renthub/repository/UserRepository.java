@@ -4,6 +4,8 @@ import com.bohakka.renthub.entity.Role;
 import com.bohakka.renthub.entity.User;
 import jakarta.persistence.LockModeType;
 import java.util.Optional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +19,14 @@ public interface UserRepository extends JpaRepository<User, Long> {
 	boolean existsByEmail(String email);
 
 	boolean existsByRole(Role role);
+
+	/** FR-22: users (not the admin) whose name or e-mail contains {@code q} (lower case), newest first. */
+	@Query("""
+		select u from User u
+		where u.role = com.bohakka.renthub.entity.Role.USER
+		  and (:q = '' or lower(u.name) like concat('%', :q, '%') or lower(u.email) like concat('%', :q, '%'))
+		order by u.createdAt desc, u.id desc""")
+	Page<User> searchUsers(@Param("q") String q, Pageable pageable);
 
 	/**
 	 * The user row locked for writing until the transaction ends: serialises deactivation (FR-3c) with booking
