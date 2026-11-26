@@ -28,6 +28,7 @@ public record EquipmentRequest(
 		boolean deliveryAvailable,
 		@Size(max = 500) String deliveryNote,
 		@NotBlank @Size(max = 300) String address,
+		@NotBlank @Size(max = 100) String city,
 		@NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
 		@NotNull @DecimalMin("-180") @DecimalMax("180") Double lon) {
 }

@@ -381,3 +381,22 @@ is e-mailed; rentals already in progress continue; admin cancellations do not co
 restores nothing that was cancelled, and an unblocked listing always becomes **ACTIVE** (author's choice), even if it
 had been archived. Locks: the user's listings → the user → each booking (D-40 order). The admin is never blocked.
 
+## D-46 Admin: commission changes, category deletion, statistics E1/E5 and the listing city (2026-11-26)
+
+**Concerns:** FR-22, FR-23, FR-10, FR-4. **Decisions (author's):**
+- **Commission:** a new rate (0–100 %, 2 decimals) is a new `commission_rates` row valid from now (D-37): it applies
+  at once to new booking requests only; existing bookings keep their stored rate and commission. No scheduled future
+  rates (YAGNI). The admin sees the current rate, its `updatedAt` (the version's `validFrom`) and the latest versions.
+- **Categories:** names are unique regardless of case; months 1–12, a season may wrap over New Year. A category
+  without listings is deleted directly; one with listings (any status) needs `targetId`: the category row and its
+  listings are locked, the listings move to the target and the category is deleted in one transaction; without a
+  target the answer is 409 `category.has_listings`.
+- **Statistics:** the period is whole days in Europe/Kyiv, both ends included. E1 = listings `ACTIVE` now and created
+  before the end of the period (labelled as a current snapshot, there is no status history). E2 = CONFIRMED/COMPLETED
+  bookings overlapping the period without a day on which such bookings of the listing hold more units than its
+  quantity, as a share of all of them (shown as «—» without bookings). E3 = average rating of reviews published in the
+  period. E4 = commission of bookings completed in the period. E5 = distinct `city` values among the E1 listings.
+- **Listing city:** new `equipment.city` (V10, NOT NULL). Nominatim is now asked for address details and the listing
+  form takes the city, town or village from the result; the owner confirms or corrects it. Existing rows (all seed
+  data in Lviv) are set to «Львів» by the migration, and the dev seed script includes the city.
+

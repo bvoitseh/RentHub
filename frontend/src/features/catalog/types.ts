@@ -61,6 +61,7 @@ export interface EquipmentDetails {
   deliveryAvailable: boolean
   deliveryNote: string | null
   address: string
+  city: string
   lat: number
   lon: number
   status: EquipmentStatus

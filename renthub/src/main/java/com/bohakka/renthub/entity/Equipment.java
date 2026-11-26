@@ -82,6 +82,10 @@ public class Equipment {
 	@Column(nullable = false, length = 300)
 	private String address;
 
+	/** FR-23 E5: the city, suggested by geocoding and confirmed by the owner (D-46). */
+	@Column(nullable = false, length = 100)
+	private String city;
+
 	@Column(nullable = false)
 	private double lat;
 
@@ -103,13 +107,13 @@ public class Equipment {
 	private List<EquipmentPhoto> photos = new ArrayList<>();
 
 	public Equipment(User owner, Category category, String title, String description, ItemCondition condition,
-			RentalTerms terms, String address, GeoPoint point, Instant now) {
+			RentalTerms terms, String address, String city, GeoPoint point, Instant now) {
 		this.owner = owner;
 		this.status = EquipmentStatus.ACTIVE;
 		this.createdAt = now;
 		describe(category, title, description, condition, now);
 		applyTerms(terms, now);
-		relocate(address, point, now);
+		relocate(address, city, point, now);
 	}
 
 	/** Descriptive fields (FR-5: always editable, even with active bookings). */
@@ -132,9 +136,10 @@ public class Equipment {
 		this.updatedAt = now;
 	}
 
-	/** FR-4: the address as typed and the pin the owner confirmed (geocoded or placed by hand). */
-	public void relocate(String address, GeoPoint point, Instant now) {
+	/** FR-4: the address as typed, its city and the pin the owner confirmed (geocoded or placed by hand). */
+	public void relocate(String address, String city, GeoPoint point, Instant now) {
 		this.address = address.trim();
+		this.city = city.trim();
 		this.lat = point.lat();
 		this.lon = point.lon();
 		this.updatedAt = now;
@@ -155,6 +160,12 @@ public class Equipment {
 
 	public boolean isOwnedBy(Long userId) {
 		return owner.getId().equals(userId);
+	}
+
+	/** FR-22: the category is deleted and its listings move to {@code target} (D-46). */
+	public void moveTo(Category target, Instant now) {
+		this.category = target;
+		this.updatedAt = now;
 	}
 
 	/** FR-20: an admin block hides the listing from the catalogue and stops new bookings. */

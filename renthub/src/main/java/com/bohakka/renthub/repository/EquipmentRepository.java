@@ -38,6 +38,27 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long>, Jpa
 	@Query("select e from Equipment e where e.owner.id = :ownerId order by e.id")
 	List<Equipment> lockByOwnerId(@Param("ownerId") Long ownerId);
 
+	/** FR-22: listing counts per category, rows of [categoryId, count], any status. */
+	@Query("select e.category.id, count(e) from Equipment e group by e.category.id")
+	List<Object[]> countByCategory();
+
+	/** FR-22: listings of a category being deleted, locked so they move together with the deletion. */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select e from Equipment e where e.category.id = :categoryId order by e.id")
+	List<Equipment> lockByCategoryId(@Param("categoryId") Long categoryId);
+
+	/** FR-23 E1: listings active now that were created before {@code end}. */
+	@Query("""
+		select count(e) from Equipment e
+		where e.status = com.bohakka.renthub.entity.EquipmentStatus.ACTIVE and e.createdAt < :end""")
+	long countActiveCreatedBefore(@Param("end") java.time.Instant end);
+
+	/** FR-23 E5: distinct cities among the listings counted by {@link #countActiveCreatedBefore}. */
+	@Query("""
+		select count(distinct e.city) from Equipment e
+		where e.status = com.bohakka.renthub.entity.EquipmentStatus.ACTIVE and e.createdAt < :end""")
+	long countCitiesActiveCreatedBefore(@Param("end") java.time.Instant end);
+
 	/** The owner's dashboard: own listings in every status, newest first. */
 	@EntityGraph(attributePaths = {"category"})
 	List<Equipment> findByOwnerIdOrderByCreatedAtDesc(Long ownerId);

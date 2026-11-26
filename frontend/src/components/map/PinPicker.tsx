@@ -1,5 +1,5 @@
 import L from 'leaflet'
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { DEFAULT_CENTER, markerIcon, roundPoint, type LatLon } from '@/components/map/leaflet'
 import { useLeafletMap } from '@/components/map/useLeafletMap'
 
@@ -12,7 +12,9 @@ export interface PinPickerProps {
 
 /** FR-4 pin editor: click the map to place the pin, drag it to correct; external value changes move the pin. */
 export function PinPicker({ value, onChange, label, className = 'h-72' }: PinPickerProps) {
-  const { containerRef, map } = useLeafletMap(value ?? DEFAULT_CENTER, value ? 16 : 13)
+  // The zoom only matters when the map is created; a changing value must not re-create the map under the pin.
+  const [initialZoom] = useState(value ? 16 : 13)
+  const { containerRef, map } = useLeafletMap(value ?? DEFAULT_CENTER, initialZoom)
   const marker = useRef<L.Marker | null>(null)
   const onChangeRef = useRef(onChange)
 

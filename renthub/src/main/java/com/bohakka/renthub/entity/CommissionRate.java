@@ -37,6 +37,13 @@ public class CommissionRate {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	/** FR-22: a new version in force from {@code now}, for new booking requests only (D-46). */
+	public CommissionRate(BigDecimal rate, Instant now) {
+		this.rate = rate.setScale(2, RoundingMode.HALF_UP);
+		this.validFrom = now;
+		this.createdAt = now;
+	}
+
 	/** FR-10: commission = amount × rate / 100, HALF_UP to 2 decimals. */
 	public BigDecimal commissionOn(BigDecimal amount) {
 		return amount.multiply(rate).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);

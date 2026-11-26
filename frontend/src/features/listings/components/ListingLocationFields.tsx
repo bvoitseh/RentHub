@@ -15,10 +15,19 @@ export function ListingLocationFields({ form }: { form: UseFormReturn<ListingInp
   const { errors } = form.formState
   const geocode = useMutation({
     mutationFn: (address: string) => listingsApi.geocode(address),
-    onSuccess: (result) => form.setValue('point', { lat: result.lat, lon: result.lon }, { shouldDirty: true, shouldValidate: true }),
+    onSuccess: (result) => {
+      form.setValue('point', { lat: result.lat, lon: result.lon }, { shouldDirty: true, shouldValidate: true })
+      if (result.city) form.setValue('city', result.city, { shouldDirty: true, shouldValidate: true })
+    },
   })
 
-  const status = geocode.isPending ? t.location.finding : geocode.isSuccess ? t.location.found : geocode.isError ? t.location.notFound : t.location.hint
+  const status = geocode.isPending
+    ? t.location.finding
+    : geocode.isSuccess
+      ? t.location.found
+      : geocode.isError
+        ? t.location.notFound
+        : t.location.hint
 
   return (
     <div className="flex flex-col gap-2">
@@ -38,6 +47,9 @@ export function ListingLocationFields({ form }: { form: UseFormReturn<ListingInp
           </Button>
         </div>
       </FormField>
+      <FormField label={t.fields.city} htmlFor="l-city" hint={t.fields.cityHint} error={errors.city?.message}>
+        <Input id="l-city" maxLength={100} invalid={!!errors.city} {...form.register('city')} />
+      </FormField>
       <p className={`text-sm ${geocode.isError ? 'text-amber-700' : 'text-slate-600'}`} aria-live="polite">
         {status}
       </p>
@@ -45,11 +57,7 @@ export function ListingLocationFields({ form }: { form: UseFormReturn<ListingInp
         control={form.control}
         name="point"
         render={({ field }) => (
-          <PinPicker
-            value={field.value}
-            onChange={(point) => field.onChange(point)}
-            label={uk.catalog.map.pin}
-          />
+          <PinPicker value={field.value} onChange={(point) => field.onChange(point)} label={uk.catalog.map.pin} />
         )}
       />
       <p className="min-h-4 text-xs text-red-600" aria-live="polite">

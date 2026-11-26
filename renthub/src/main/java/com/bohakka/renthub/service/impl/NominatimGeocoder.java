@@ -45,12 +45,12 @@ public class NominatimGeocoder implements Geocoder {
 		if (cached.isPresent()) {
 			GeocodeCacheEntry entry = cached.get();
 			return entry.isFound()
-				? Optional.of(new GeocodeResponse(entry.getLat(), entry.getLon(), entry.getDisplayName()))
+				? Optional.of(new GeocodeResponse(entry.getLat(), entry.getLon(), entry.getDisplayName(), entry.getCity()))
 				: Optional.empty();
 		}
 		try {
 			Optional<GeocodeResponse> result = search(address.trim());
-			cache.save(result.map(r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName()))
+			cache.save(result.map(r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName(), r.city()))
 				.orElseGet(() -> GeocodeCacheEntry.miss(key)));
 			return result;
 		} catch (RestClientException | NumberFormatException ex) {
@@ -63,7 +63,7 @@ public class NominatimGeocoder implements Geocoder {
 		waitForSlot();
 		Place[] places = nominatim.get()
 			.uri(uri -> uri.path("/search").queryParam("q", address).queryParam("format", "jsonv2")
-				.queryParam("limit", 1).queryParam("countrycodes", properties.countryCodes())
+				.queryParam("limit", 1).queryParam("addressdetails", 1).queryParam("countrycodes", properties.countryCodes())
 				.queryParam("accept-language", "uk").build())
 			.retrieve()
 			.body(Place[].class);
@@ -72,7 +72,7 @@ public class NominatimGeocoder implements Geocoder {
 		}
 		Place place = places[0];
 		return Optional.of(new GeocodeResponse(Double.parseDouble(place.lat()), Double.parseDouble(place.lon()),
-			place.displayName()));
+			place.displayName(), place.address() == null ? null : place.address().settlement()));
 	}
 
 	/** NFR-13: at most one Nominatim request per second; concurrent callers queue here. */
@@ -89,6 +89,14 @@ public class NominatimGeocoder implements Geocoder {
 		lastRequestNanos = System.nanoTime();
 	}
 
-	private record Place(String lat, String lon, @JsonProperty("display_name") String displayName) {
+	private record Place(String lat, String lon, @JsonProperty("display_name") String displayName, Address address) {
+	}
+
+	/** Nominatim names the settlement by its kind; the first one present is the listing's city (D-46). */
+	private record Address(String city, String town, String village) {
+
+		String settlement() {
+			return city != null ? city : town != null ? town : village;
+		}
 	}
 }

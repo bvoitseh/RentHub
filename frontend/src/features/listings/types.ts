@@ -14,6 +14,7 @@ export interface ListingPayload {
   deliveryAvailable: boolean
   deliveryNote: string | null
   address: string
+  city: string
   lat: number
   lon: number
 }
@@ -22,4 +23,6 @@ export interface GeocodeResult {
   lat: number
   lon: number
   displayName: string
+  /** City, town or village from the geocoder; null when it has none. */
+  city: string | null
 }

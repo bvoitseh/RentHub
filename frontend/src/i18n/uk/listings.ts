@@ -35,6 +35,8 @@ export const listings = {
     deliveryNote: 'Умови доставки',
     deliveryNoteHint: 'Наприклад: доставка по Львову, вартість за домовленістю',
     address: 'Адреса',
+    city: 'Місто',
+    cityHint: 'Підставляється з адреси; виправте, якщо потрібно',
   },
   location: {
     find: 'Знайти на мапі',
