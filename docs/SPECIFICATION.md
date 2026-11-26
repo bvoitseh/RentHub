@@ -22,14 +22,14 @@ Requirement IDs (FR-n, NFR-n) are stable — reference them in commit messages, 
 |---|---|---|
 | User | id, name, email (unique), emailVerified, phone, passwordHash, role, city, geoConsent, blocked, deactivatedAt, ownerType? (`PRIVATE`/`COMPANY`), companyName?, edrpou? | roles: `RENTER`, `OWNER`, `ADMIN`; owner type fields apply to owners only (FR-1a); `deactivatedAt` set = account deactivated by the user (FR-3c) |
 | Category | id, name (unique), seasonFrom, seasonTo (months 1–12) | a season may wrap over New Year (e.g. 11→2) |
-| Equipment | id, owner, category, title, description, condition, pricePerDay, quantity (≥ 1), minDays, maxDays?, pickupAvailable, deliveryAvailable, deliveryNote?, address, lat, lon, status | status: `ACTIVE`, `ARCHIVED`, `BLOCKED` |
+| Equipment | id, owner, category, title, description, condition, pricePerDay, quantity (≥ 1), minDays, maxDays?, pickupAvailable, deliveryAvailable, deliveryNote?, address, city, lat, lon, status | status: `ACTIVE`, `ARCHIVED`, `BLOCKED`; `city` is suggested by geocoding (city / town / village) and confirmed or corrected by the owner (FR-23 E5) |
 | EquipmentPhoto | id, equipment, storageKey, position | 1–5 photos per listing, stored in S3-compatible object storage |
 | EmailToken | id, user, type (`VERIFY_EMAIL`, `RESET_PASSWORD`), tokenHash, expiresAt, usedAt | single-use; store only a hash of the token |
 | AvailabilityBlock | id, equipment, dateFrom, dateTo, reason | period the owner closed for rental |
 | Booking | id, equipment, renter, units (≥ 1), dateFrom, dateTo, handover (`PICKUP`/`DELIVERY`), totalPrice, commission, status, createdAt, decidedAt?, cancelledBy? (`RENTER`/`OWNER`/`ADMIN`), cancelReason? | status: `NEW`, `CONFIRMED`, `REJECTED`, `CANCELLED`, `COMPLETED` |
 | Review | id, booking, author, target, rating (1–5), comment, createdAt, publishedAt?, reply?, repliedAt? | one per side per booking; hidden until published (FR-18) |
 | Complaint | id, author, targetUser?, targetEquipment?, text, status, createdAt | status: `NEW`, `RESOLVED`, `REJECTED`; at least one target |
-| Settings | feeRate (%), updatedAt | singleton row (id = 1) |
+| CommissionRate | rate (%), validFrom | versioned: the newest version that has started is in force; a change adds a version valid from now; each booking keeps the version it was priced with (FR-22, D-37) |
 
 Conventions: a rental period is `[dateFrom, dateTo]` with **`dateTo` inclusive**. Prices are in UAH with 2 decimals; "today" means the current date in the Europe/Kyiv time zone.
 
@@ -96,12 +96,14 @@ Booking validation: only future dates (`dateFrom` no earlier than tomorrow — c
 - **FR-20** Moderate: block/unblock users and listings; blocked listings disappear from the catalogue. On blocking, **future bookings are cancelled automatically**: every `NEW` or `CONFIRMED` booking with `dateFrom > today` — of the blocked listing, or where the blocked user is renter or owner — becomes `CANCELLED` (`cancelledBy = ADMIN`, reason "Заблоковано адміністратором"), and the other party is e-mailed. Bookings already in progress (`dateFrom ≤ today ≤ dateTo`) continue and complete normally. Admin-cancellations do not count towards the owner-cancellation counter. Unblocking does not restore cancelled bookings.
 - **FR-21** Any authenticated user can file a complaint about a listing and/or a user (one open complaint per author per target). Complaints **do not hide** a listing automatically — only an admin block does. The user's public profile shows a **complaint counter**: complaints against the user and their listings, excluding those the admin rejected as unfounded.
 - **FR-22** Admin resolves or rejects complaints; manages categories (CRUD with season) and the commission rate.
+  - **Commission rate:** a change takes effect immediately for new booking requests only; existing bookings keep their stored commission (FR-10). No scheduling of future rates. The admin UI shows the current rate and when it was set (`updatedAt`).
+  - **Deleting a category:** a category without listings is deleted directly. A category with listings (any status) can be deleted only with a target category: all its listings move there and the category is deleted in one transaction; without a target the request is refused (409).
 - **FR-23** Admin statistics for a chosen period:
-  - E1 number of active listings;
+  - E1 number of active listings — a current snapshot: listings `ACTIVE` now that were created before the end of the period;
   - E2 share of conflict-free bookings (monitoring query: `CONFIRMED`/`COMPLETED` bookings for which no covered day has more confirmed units than the listing's quantity ÷ all such bookings; expected 100 %);
   - E3 average rating;
   - E4 total commission of `COMPLETED` bookings;
-  - E5 number of distinct cities among active listings.
+  - E5 number of distinct cities (`Equipment.city`) among the listings counted in E1.
 
 ---
 
