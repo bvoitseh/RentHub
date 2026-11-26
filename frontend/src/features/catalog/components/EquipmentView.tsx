@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { Alert } from '@/components/ui/Alert'
 import { MapView } from '@/components/map/MapView'
 import { BookingPanel } from '@/features/booking/components/BookingPanel'
+import { ComplaintButton } from '@/features/complaints/components/ComplaintButton'
 import { UserReviews } from '@/features/reviews/components/UserReviews'
 import { EquipmentFacts } from '@/features/catalog/components/EquipmentFacts'
 import { EquipmentGallery } from '@/features/catalog/components/EquipmentGallery'
@@ -40,6 +41,7 @@ export function EquipmentView({ item }: { item: EquipmentDetails }) {
             </Link>
           )}
           <OwnerPanel owner={item.owner} />
+          {!item.mine && <ComplaintButton subject={{ equipmentId: item.id }} />}
         </div>
       </div>
       <BookingPanel item={item} />
