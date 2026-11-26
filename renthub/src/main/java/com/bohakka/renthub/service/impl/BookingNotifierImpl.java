@@ -32,6 +32,11 @@ public class BookingNotifierImpl implements BookingNotifier {
 	}
 
 	@Override
+	public void adminCancelled(Booking booking, boolean toOwner) {
+		publish(booking, BookingNoticeType.CANCELLED_BY_ADMIN, toOwner, null, booking.getCancelReason(), null, null);
+	}
+
+	@Override
 	public void remindToReview(Booking booking, Instant reviewUntil) {
 		publish(booking, BookingNoticeType.REVIEW_REMINDER, false, reviewUntil, null, null, null);
 		publish(booking, BookingNoticeType.REVIEW_REMINDER, true, reviewUntil, null, null, null);

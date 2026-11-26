@@ -47,6 +47,23 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
 	boolean existsByEquipmentId(Long equipmentId);
 
+	/** FR-20: ids of NEW/CONFIRMED bookings starting after {@code today} where the user is renter or owner. */
+	@Query("""
+		select b.id from Booking b
+		where (b.renter.id = :userId or b.equipment.owner.id = :userId)
+		  and b.status in :statuses and b.dateFrom > :today
+		order by b.id""")
+	List<Long> findFutureIdsForUser(@Param("userId") Long userId,
+			@Param("statuses") Collection<BookingStatus> statuses, @Param("today") LocalDate today);
+
+	/** FR-20: ids of NEW/CONFIRMED bookings of a listing starting after {@code today}. */
+	@Query("""
+		select b.id from Booking b
+		where b.equipment.id = :equipmentId and b.status in :statuses and b.dateFrom > :today
+		order by b.id""")
+	List<Long> findFutureIdsForEquipment(@Param("equipmentId") Long equipmentId,
+			@Param("statuses") Collection<BookingStatus> statuses, @Param("today") LocalDate today);
+
 	/** FR-13: the renter's own bookings, newest first. */
 	@EntityGraph(attributePaths = {"equipment", "equipment.owner", "renter"})
 	Page<Booking> findByRenterIdOrderByCreatedAtDesc(Long renterId, Pageable pageable);

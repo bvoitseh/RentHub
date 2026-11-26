@@ -12,6 +12,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface EquipmentRepository extends JpaRepository<Equipment, Long>, JpaSpecificationExecutor<Equipment> {
 
@@ -23,6 +24,19 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long>, Jpa
 	/** Equipment card and editing: everything the card shows in one query. */
 	@EntityGraph(attributePaths = {"owner", "category", "photos"})
 	Optional<Equipment> findWithDetailsById(Long id);
+
+	/** FR-22: listings in every status whose title contains {@code q} (lower case), newest first. */
+	@EntityGraph(attributePaths = {"owner", "category"})
+	@Query("""
+		select e from Equipment e
+		where :q = '' or lower(e.title) like concat('%', :q, '%')
+		order by e.createdAt desc, e.id desc""")
+	Page<Equipment> searchAll(@Param("q") String q, Pageable pageable);
+
+	/** FR-20: every listing of the owner, locked in ascending id order (lock order D-40: listings before users). */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select e from Equipment e where e.owner.id = :ownerId order by e.id")
+	List<Equipment> lockByOwnerId(@Param("ownerId") Long ownerId);
 
 	/** The owner's dashboard: own listings in every status, newest first. */
 	@EntityGraph(attributePaths = {"category"})

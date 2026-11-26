@@ -167,6 +167,11 @@ public class Booking {
 		cancel(CancelledBy.OWNER, trimmed, today, now);
 	}
 
+	/** FR-20: cancelled because the admin blocked a user or listing; only bookings that have not started. */
+	public void cancelByAdmin(String reason, LocalDate today, Instant now) {
+		cancel(CancelledBy.ADMIN, reason, today, now);
+	}
+
 	/** FR-15: a confirmed rental whose last day has passed. */
 	public void complete(Instant now) {
 		status = status.moveTo(BookingStatus.COMPLETED);

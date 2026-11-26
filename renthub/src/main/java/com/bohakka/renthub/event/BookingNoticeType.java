@@ -18,6 +18,8 @@ public enum BookingNoticeType {
 	CANCELLED_BY_RENTER("cancelled-by-renter", true),
 	/** Booking cancelled by the owner, with the reason (FR-13a) → renter. */
 	CANCELLED_BY_OWNER("cancelled-by-owner", false),
+	/** FR-20: cancelled because the admin blocked a user or the listing → the other side. */
+	CANCELLED_BY_ADMIN("cancelled-by-admin", false),
 	/** FR-18: the rental is completed, leave a review within the window → both sides. */
 	REVIEW_REMINDER("review-reminder", false),
 	/** A review about the recipient was published → its target. */

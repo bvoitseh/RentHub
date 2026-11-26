@@ -157,6 +157,20 @@ public class Equipment {
 		return owner.getId().equals(userId);
 	}
 
+	/** FR-20: an admin block hides the listing from the catalogue and stops new bookings. */
+	public void block(Instant now) {
+		this.status = EquipmentStatus.BLOCKED;
+		this.updatedAt = now;
+	}
+
+	/** FR-20: unblocking makes the listing active again (D-45), even if it had been archived before. */
+	public void unblock(Instant now) {
+		if (status == EquipmentStatus.BLOCKED) {
+			this.status = EquipmentStatus.ACTIVE;
+			this.updatedAt = now;
+		}
+	}
+
 	/** FR-5: the owner archives the listing; it leaves the catalogue. A blocked listing stays blocked. */
 	public void archive(Instant now) {
 		if (status == EquipmentStatus.BLOCKED) {
