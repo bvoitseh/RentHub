@@ -320,3 +320,24 @@ reject/cancel and the scheduler jobs (booking), listing edit/archive and block c
 (user), so concurrent decisions cannot overwrite each other and FR-3c/FR-5 checks cannot be bypassed; (10) a NEW
 request whose FR-15b deadline has passed stops holding units at once (calendar, catalogue, requests, blocks), and an
 owner's rejection after the deadline is recorded as expired.
+
+## D-41 Booking e-mails retried in memory (2026-11-23)
+
+**Concerns:** FR-15a ("failures are logged and retried at most a few times"), FR-15b, NFR-13. **Decision:** author's
+choice. Every e-mail (booking and account) goes through `MailDelivery` (`RetryingMailDelivery`): up to
+`app.mail.retry.attempts` = 3 attempts, pausing `app.mail.retry.backoff` = 10 s and 60 s between them on the async mail
+thread; each failure is logged at WARN and the last at ERROR, with a label (e.g. "booking 42 CONFIRMED") and never the
+address. Pending retries live only in memory, so a restart during the ~70 s window drops them; no outbox table. While
+an e-mail waits for a retry it occupies one of the two async threads, which is acceptable at this scale. Booking
+e-mails are a snapshot event (`BookingNotice`) published inside the booking transaction and sent only after it
+commits; a deactivated recipient gets none (FR-3c). Six e-mails: new request → owner (with the answer deadline),
+confirmed → renter (with the owner's name and phone, FR-3b), rejected / expired / cancelled by the owner (with the
+reason) → renter, cancelled by the renter → owner. Completion (FR-15) sends nothing; admin cancellations (FR-20) will
+reuse the same notifier.
+
+## D-42 FR-18 review reminders move to the reviews feature (2026-11-23)
+
+**Concerns:** FR-18 ("both sides get a reminder e-mail at completion"), CLAUDE.md 2.5 backlog item 5. **Decision:**
+author's choice. A reminder that points to a review form that does not exist yet would be misleading, so the reminder
+is implemented in `feature/reviews` together with the form, using `BookingNotifier` and `MailDelivery`.
+

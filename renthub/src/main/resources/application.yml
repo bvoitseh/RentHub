@@ -127,6 +127,11 @@ app:
     request-ttl: ${BOOKING_REQUEST_TTL:48h}
     complete-cron: "0 5 0 * * *"
     expire-cron: "0 0 * * * *"
+  # FR-15a: failed e-mails are retried in memory on the async mail thread (D-41); pauses before the 2nd and 3rd attempt.
+  mail:
+    retry:
+      attempts: ${MAIL_RETRY_ATTEMPTS:3}
+      backoff: 10s,60s
   # NFR-14: "limit" attempts per "window"; reaching the limit locks the key for another window.
   rate-limit:
     login:
