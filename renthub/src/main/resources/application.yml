@@ -127,6 +127,11 @@ app:
     request-ttl: ${BOOKING_REQUEST_TTL:48h}
     complete-cron: "0 5 0 * * *"
     expire-cron: "0 0 * * * *"
+  # FR-18: review window after completion, reply window after publication, and the job publishing expired windows.
+  review:
+    window: ${REVIEW_WINDOW:14d}
+    reply-window: ${REVIEW_REPLY_WINDOW:14d}
+    publish-cron: "0 15 * * * *"
   # FR-15a: failed e-mails are retried in memory on the async mail thread (D-41); pauses before the 2nd and 3rd attempt.
   mail:
     retry:

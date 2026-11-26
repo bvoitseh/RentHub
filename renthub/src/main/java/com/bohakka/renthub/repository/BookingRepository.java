@@ -69,6 +69,11 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 	@Query("select b from Booking b where b.id = :id")
 	Optional<Booking> lockById(@Param("id") Long id);
 
+	@Query("""
+		select new com.bohakka.renthub.repository.BookingParties(b.renter.id, b.equipment.owner.id)
+		from Booking b where b.id = :id""")
+	Optional<BookingParties> findPartiesById(@Param("id") Long id);
+
 	@Query("select b.equipment.id from Booking b where b.id = :id")
 	Optional<Long> findEquipmentIdById(@Param("id") Long id);
 

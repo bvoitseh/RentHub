@@ -25,11 +25,19 @@ export interface BookingPayload {
   handover: Handover
 }
 
+/** A side of a booking; rating/reviewCount from published reviews (FR-19), rating null without any. */
+export interface BookingParty {
+  id: number
+  name: string
+  rating: number | null
+  reviewCount: number
+}
+
 export interface Booking {
   id: number
   equipment: { id: number; title: string; coverUrl: string | null }
-  renter: { id: number; name: string }
-  owner: { id: number; name: string }
+  renter: BookingParty
+  owner: BookingParty
   units: number
   dateFrom: string
   dateTo: string

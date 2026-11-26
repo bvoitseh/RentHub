@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * {@link PublicProfileService}: name, city, account type and FR-19 figures; no e-mail or phone (NFR-5). The admin has
- * no public profile. Rating, reviews and complaints come with their features (D-32); owner cancellations are FR-13a.
+ * no public profile. Rating and review count from published reviews (FR-19); complaints come later (D-32).
  */
 @Service
 @RequiredArgsConstructor
@@ -30,7 +30,7 @@ public class PublicProfileServiceImpl implements PublicProfileService {
 			.filter(u -> u.getRole() == Role.USER)
 			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
 		return new PublicProfileResponse(user.getId(), user.getName(), user.getCity(), user.getOwnerType(),
-			user.getCompanyName(), user.isDeactivated(), null, 0,
+			user.getCompanyName(), user.isDeactivated(), EquipmentMapper.rating(user), user.getReviewCount(),
 			Math.toIntExact(bookings.countCancelledBy(user.getId(), CancelledBy.OWNER)), 0, user.getCreatedAt());
 	}
 }

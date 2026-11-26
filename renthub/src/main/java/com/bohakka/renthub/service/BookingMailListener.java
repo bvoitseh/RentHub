@@ -21,8 +21,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
  * Sends the FR-15a / FR-15b booking e-mails after the booking transaction commits, on the async pool, so they never
  * block or fail the request. Texts are {@code mail.booking.<type>.subject/body} in messages_uk.properties; the body
  * arguments are, in order: {0} recipient, {1} other party, {2} listing, {3} period, {4} length («3 доби»), {5} units,
- * {6} handover, {7} total, {8} answer deadline, {9} owner's phone, {10} cancellation reason, {11} link to the
- * caller's booking page, {12} catalogue link.
+ * {6} handover, {7} total, {8} answer / review deadline, {9} owner's phone, {10} cancellation reason, {11} link to
+ * the page to act on, {12} catalogue link, {13} rating («4 з 5»), {14} review or reply text.
  */
 @Component
 @RequiredArgsConstructor
@@ -43,11 +43,21 @@ public class BookingMailListener {
 		Object[] args = {notice.recipientName(), notice.otherPartyName(), notice.equipmentTitle(),
 			period(notice.dateFrom(), notice.dateTo()), days(notice.days()), String.valueOf(notice.units()),
 			handover(notice.handover()), money(notice.totalPrice()), deadline(notice.deadline()),
-			orDash(notice.ownerPhone()), orDash(notice.cancelReason()),
-			app.baseUrl() + (notice.type().toOwner() ? "/my/requests" : "/my/bookings"), app.baseUrl() + "/catalog"};
+			orDash(notice.ownerPhone()), orDash(notice.cancelReason()), app.baseUrl() + path(notice),
+			app.baseUrl() + "/catalog", notice.reviewRating() == null ? "—" : notice.reviewRating() + " з 5",
+			orDash(notice.reviewText())};
 		EmailMessage message = new EmailMessage(notice.recipientEmail(), text(prefix + ".subject", args),
 			text(prefix + ".body", args));
 		delivery.deliver(message, "booking " + notice.bookingId() + " " + notice.type());
+	}
+
+	/** Where the recipient acts: their booking list, or the profile that shows the review (FR-18). */
+	private static String path(BookingNotice notice) {
+		return switch (notice.type()) {
+			case REVIEW_PUBLISHED -> "/users/" + notice.recipientId();
+			case REVIEW_REPLIED -> "/users/" + notice.otherPartyId();
+			default -> notice.recipientIsOwner() ? "/my/requests" : "/my/bookings";
+		};
 	}
 
 	private String text(String key, Object... args) {

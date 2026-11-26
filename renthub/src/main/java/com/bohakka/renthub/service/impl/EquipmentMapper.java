@@ -20,10 +20,14 @@ public class EquipmentMapper {
 
 	private final ObjectStorage storage;
 
-	/** FR-19 rating and review count arrive with the reviews feature; until then: no rating, 0 reviews. */
+	/** FR-19: rating and review count from published reviews (null rating while there are none). */
 	public OwnerBadge owner(User owner) {
 		return new OwnerBadge(owner.getId(), owner.getName(), owner.getCity(), owner.getOwnerType(),
-			owner.getCompanyName(), null, 0);
+			owner.getCompanyName(), rating(owner), owner.getReviewCount());
+	}
+
+	public static Double rating(User user) {
+		return user.getRatingAvg() == null ? null : user.getRatingAvg().doubleValue();
 	}
 
 	public EquipmentSummaryResponse summary(Equipment e, String coverKey, Double distanceKm, BigDecimal totalPrice) {

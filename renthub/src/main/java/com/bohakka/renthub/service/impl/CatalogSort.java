@@ -5,15 +5,17 @@ import org.springframework.data.domain.Sort;
 
 /**
  * FR-7 sort options; without one, distance if a point is known, else price ascending; ties go to the newest listing.
- * {@code newest} is an extra option. {@code rating} orders by newest until the reviews feature provides ratings (D-32);
- * {@code distance} is ordered by the distance expression itself, so it has no {@link Sort} here.
+ * {@code newest} is an extra option; {@code rating} uses the owner's average from published reviews (FR-19);
+ * {@code distance} and {@code rating} are ordered inside the query (see EquipmentSpecifications), so they have no
+ * {@link Sort} here.
  */
 enum CatalogSort {
 	NEWEST(Sort.by(Sort.Order.desc("createdAt"), Sort.Order.desc("id"))),
 	PRICE_ASC(Sort.by(Sort.Order.asc("pricePerDay"), Sort.Order.desc("createdAt"), Sort.Order.desc("id"))),
 	PRICE_DESC(Sort.by(Sort.Order.desc("pricePerDay"), Sort.Order.desc("createdAt"), Sort.Order.desc("id"))),
 	DISTANCE(Sort.unsorted()),
-	RATING(NEWEST.sort);
+	/** FR-7: owner rating descending, unrated owners last; ordered by the query itself (bestRatedFirst). */
+	RATING(Sort.unsorted());
 
 	private final Sort sort;
 

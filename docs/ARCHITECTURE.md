@@ -31,10 +31,10 @@ New features add classes to these packages; a new package is created only for a 
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`), `StorageProperties` (`app.storage.*`), `GeocodingProperties` (`app.geocoding.*`), `BookingProperties` (`app.booking.*`) |
 | `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`) |
 | `dto` | request/response records (`RegisterRequest`, `UserResponse`, `EquipmentRequest`, `CatalogQuery`, `EquipmentSummaryResponse`, `EquipmentDetailsResponse`, `PageResponse`, `PublicProfileResponse`, `BookingRequest`, `BookingResponse`, `AvailabilityResponse`, `BookingRef`, `ContactResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
-| `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository`, `AvailabilityBlockRepository`, `CommissionRateRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs` (scheduler) |
-| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
+| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
+| `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
 | `event` | application events: `VerificationEmailRequested`, `PasswordResetEmailRequested` (e-mails); `StoredObjectsRemoved`, `StoredObjectUploaded` (storage clean-up after commit / rollback); `BookingNotice` + `BookingNoticeType` (booking e-mails) |
@@ -66,7 +66,14 @@ locks are always taken in the order listing → users → booking (D-40). Every 
 expires) calls `BookingNotifier`, which publishes a `BookingNotice` snapshot; `BookingMailListener` sends the
 Ukrainian e-mail after the commit, off the request thread, through `MailDelivery` (3 attempts, 10 s / 60 s, D-41). `BookingQueryServiceImpl` serves the lists and the FR-3b contact rule.
 
-**Where business rules will live:** season logic and rating in their services; entity methods guard their own invariants.
+**Reviews (FR-18, FR-19) in short:** `Review` owns the blind rule (`isVisibleTo`), publication (adds the rating to
+the target: `User.addPublishedRating` keeps sum, count and average) and the one-reply rule with its window.
+`ReviewServiceImpl` accepts a review only from a side of a COMPLETED booking within the window; it locks both
+users, then the booking (D-40 order), and publishes both reviews when the second arrives. `ReviewPublicationJob`
+publishes lone reviews after the window. Ratings travel on `OwnerBadge`, booking parties and the public profile;
+the catalogue `rating` sort is `EquipmentSpecifications.bestRatedFirst`.
+
+**Where business rules will live:** season logic in the recommendations service; entity methods guard their own invariants.
 
 **Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
 Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions
@@ -109,7 +116,8 @@ runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validate
 
 **Scheduled jobs:** `BookingLifecycleJobs` (cron, Europe/Kyiv): daily 00:05 completes CONFIRMED bookings with
 `dateTo < today` (FR-15), hourly expires NEW requests older than 48 h or whose first day arrived (FR-15b). Both go
-through `Booking`'s methods. Review publishing comes with its feature.
+through `Booking`'s methods; completion also sends the FR-18 review reminder. `ReviewPublicationJob` (hourly at :15)
+publishes reviews whose window has ended.
 
 **Integrations** (one small application-owned interface each, configured only through `${ENV}`):
 e-mail via `MailGateway` (SMTP, `SMTP_*`); photos via `ObjectStorage` (`S3ObjectStorage`, AWS SDK v2 against any
@@ -147,6 +155,8 @@ src/
                      useBookingMutations, useDateRange} · components/ (AvailabilityCalendar + CalendarDay, BookingPanel +
                      BookingForm + PriceSummary, BookingList + BookingRow + BookingActions + CancelDialog, BookingStatusBadge,
                      BookingContact, BlocksManager)
+└─ features/reviews/ types.ts · api/reviewsApi.ts · hooks/useReviews.ts · components/ (Stars, StarInput, ReviewForm,
+                     ReviewCard, ReplyForm, BookingReviews in booking rows, UserReviews on profiles and the card)
 ```
 
 Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via

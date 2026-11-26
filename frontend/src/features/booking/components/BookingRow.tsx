@@ -4,6 +4,7 @@ import { EquipmentCover } from '@/features/catalog/components/EquipmentCover'
 import { formatPrice } from '@/features/catalog/format'
 import { BookingContact } from '@/features/booking/components/BookingContact'
 import { BookingStatusBadge } from '@/features/booking/components/BookingStatusBadge'
+import { BookingReviews } from '@/features/reviews/components/BookingReviews'
 import { formatDateTime, formatPeriod } from '@/features/booking/dates'
 import type { Booking } from '@/features/booking/types'
 import { uk } from '@/i18n/uk'
@@ -40,7 +41,10 @@ export function BookingRow({ booking: b, party, actions }: BookingRowProps) {
           {party === 'owner' ? t.list.owner : t.list.renter}:{' '}
           <Link to={`/users/${other.id}`} className="text-brand-700 hover:underline">
             {other.name}
-          </Link>
+          </Link>{' '}
+          <span className="text-slate-500">
+            {other.rating !== null ? uk.reviews.rating(other.rating, other.reviewCount) : uk.reviews.noRating}
+          </span>
         </p>
         <p className="font-semibold text-slate-900">
           {t.form.total}: {formatPrice(b.totalPrice)}
@@ -59,6 +63,7 @@ export function BookingRow({ booking: b, party, actions }: BookingRowProps) {
           </p>
         )}
         <BookingContact booking={b} />
+        {b.status === 'COMPLETED' && <BookingReviews bookingId={b.id} />}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap items-start gap-2 sm:flex-col">{actions}</div>}
     </li>
