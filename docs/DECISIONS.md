@@ -366,3 +366,18 @@ location only for a signed-in user with geolocation consent (never stored; ignor
 geocoded with the existing Nominatim client (cached), else the configured start city (`START_CITY`, `START_CITY_LAT`,
 `START_CITY_LON`; Lviv). Cards word the distance by origin: «від вас» for the user's point, «від центру» for a city.
 
+## D-45 Complaints and moderation (2026-11-26)
+
+**Concerns:** FR-20, FR-21, FR-22 (complaints part), NFR-11. **Decision (author's model):** a complaint stores the
+complainant, the user it is against, exactly one subject — a booking number or a listing number (DB `CHECK`) — and a
+description of 10–1000 characters; status NEW → RESOLVED / REJECTED, decided by an admin. A listing complaint is
+against its owner (not one's own listing); a booking complaint comes from one of its sides and is against the other.
+Only an active user with a **verified e-mail** may complain (author's choice, against spam); one open (NEW) complaint
+per author and subject. A complaint hides nothing by itself. The profile counter counts complaints against the user,
+including their listings, except those rejected as unfounded. Blocking a user ends their sessions, hides their
+listings and cancels every NEW/CONFIRMED booking starting after today where they are renter or owner; blocking a listing
+cancels its future bookings the same way; `cancelledBy = ADMIN`, reason «Заблоковано адміністратором», the other side
+is e-mailed; rentals already in progress continue; admin cancellations do not count as the owner's. **Unblocking**
+restores nothing that was cancelled, and an unblocked listing always becomes **ACTIVE** (author's choice), even if it
+had been archived. Locks: the user's listings → the user → each booking (D-40 order). The admin is never blocked.
+
