@@ -45,6 +45,7 @@ public class BookingMapper {
 	}
 
 	private static BookingResponse.Party party(User user) {
-		return new BookingResponse.Party(user.getId(), user.getName());
+		return new BookingResponse.Party(user.getId(), user.getName(), EquipmentMapper.rating(user),
+			user.getReviewCount());
 	}
 }

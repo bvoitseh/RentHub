@@ -165,6 +165,22 @@ public final class EquipmentSpecifications {
 		};
 	}
 
+	/**
+	 * FR-7 rating sort: owners with published reviews first by their average (descending), owners without reviews
+	 * last, ties newest first. Written as an explicit CASE because NULLS LAST is not portable through Spring's Sort and
+	 * H2 here sorts NULLs high. Like {@link #nearestFirst}, ordering is added to the data query only.
+	 */
+	public static Specification<Equipment> bestRatedFirst() {
+		return (root, query, cb) -> {
+			if (!Long.class.equals(query.getResultType())) {
+				Expression<BigDecimal> rating = root.get("owner").get("ratingAvg");
+				query.orderBy(cb.asc(cb.selectCase().when(cb.isNull(rating), 1).otherwise(0)), cb.desc(rating),
+					cb.desc(root.get("createdAt")), cb.desc(root.get("id")));
+			}
+			return cb.conjunction();
+		};
+	}
+
 	private static Expression<Double> distanceKm(Root<Equipment> root, CriteriaBuilder cb, GeoPoint point) {
 		double pointLat = Math.toRadians(point.lat());
 		double pointLon = Math.toRadians(point.lon());

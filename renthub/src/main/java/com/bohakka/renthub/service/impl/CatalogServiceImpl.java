@@ -6,6 +6,7 @@ import static com.bohakka.renthub.repository.EquipmentSpecifications.hasFreeUnit
 import static com.bohakka.renthub.repository.EquipmentSpecifications.hasUnits;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.inCategory;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.matchesText;
+import static com.bohakka.renthub.repository.EquipmentSpecifications.bestRatedFirst;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.nearestFirst;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.ownedByType;
 import static com.bohakka.renthub.repository.EquipmentSpecifications.pickupAvailable;
@@ -68,6 +69,8 @@ public class CatalogServiceImpl implements CatalogService {
 		Specification<Equipment> spec = filter(query, point);
 		if (sort == CatalogSort.DISTANCE) {
 			spec = spec.and(nearestFirst(point));
+		} else if (sort == CatalogSort.RATING) {
+			spec = spec.and(bestRatedFirst());
 		}
 		int page = query.page() == null ? 0 : query.page();
 		int size = query.size() == null ? DEFAULT_PAGE_SIZE : query.size();

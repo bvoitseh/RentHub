@@ -19,6 +19,7 @@ public record BookingResponse(Long id, Item equipment, Party renter, Party owner
 	public record Item(Long id, String title, String coverUrl) {
 	}
 
-	public record Party(Long id, String name) {
+	/** {@code rating}/{@code reviewCount}: FR-19, so owners can judge a renter (null rating = no reviews yet). */
+	public record Party(Long id, String name, Double rating, int reviewCount) {
 	}
 }

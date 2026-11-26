@@ -4,6 +4,7 @@ import com.bohakka.renthub.entity.Booking;
 import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.event.BookingNoticeType;
 import com.bohakka.renthub.properties.BookingProperties;
+import com.bohakka.renthub.properties.ReviewProperties;
 import com.bohakka.renthub.repository.BookingRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -27,15 +28,20 @@ public class BookingLifecycleJobs {
 	private final BookingRepository bookings;
 	private final BookingProperties properties;
 	private final BookingNotifier notifier;
+	private final ReviewProperties reviewProperties;
 	private final Clock clock;
 
-	/** FR-15: CONFIRMED bookings whose last day is before today become COMPLETED. */
+	/** FR-15: CONFIRMED bookings whose last day is before today become COMPLETED; FR-18: both sides are invited to
+	 * review within the window. */
 	@Scheduled(cron = "${app.booking.complete-cron}", zone = "${app.time-zone}")
 	@Transactional
 	public void completeFinished() {
 		Instant now = clock.instant();
 		List<Booking> finished = bookings.findByStatusAndDateToBefore(BookingStatus.CONFIRMED, LocalDate.now(clock));
-		finished.forEach(b -> b.complete(now));
+		finished.forEach(b -> {
+			b.complete(now);
+			notifier.remindToReview(b, now.plus(reviewProperties.window()));
+		});
 		if (!finished.isEmpty()) {
 			log.info("Completed {} finished booking(s)", finished.size());
 		}

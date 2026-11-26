@@ -9,6 +9,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.Locale;
 import lombok.AccessLevel;
@@ -71,6 +73,17 @@ public class User {
 	@Column(name = "created_at", nullable = false, updatable = false)
 	private Instant createdAt;
 
+	/** FR-19: sum and count of the ratings in published reviews about this user; the average is derived from them. */
+	@Column(name = "rating_sum", nullable = false)
+	private int ratingSum;
+
+	@Column(name = "review_count", nullable = false)
+	private int reviewCount;
+
+	/** Null while there are no published reviews (such users sort last by rating, FR-7). */
+	@Column(name = "rating_avg", precision = 3, scale = 2)
+	private BigDecimal ratingAvg;
+
 	public User(String name, String email, String phone, String passwordHash, Role role, String city, Instant now) {
 		this.name = name.trim();
 		this.email = normalizeEmail(email);
@@ -128,6 +141,16 @@ public class User {
 
 	public boolean isDeactivated() {
 		return deactivatedAt != null;
+	}
+
+	/**
+	 * FR-19: counts a newly published review about this user. Callers hold this user's row lock, so concurrent
+	 * publications cannot lose an update.
+	 */
+	public void addPublishedRating(int rating) {
+		this.ratingSum += rating;
+		this.reviewCount += 1;
+		this.ratingAvg = BigDecimal.valueOf(ratingSum).divide(BigDecimal.valueOf(reviewCount), 2, RoundingMode.HALF_UP);
 	}
 
 	/** Whether the account may log in and act (not blocked by an admin). */
