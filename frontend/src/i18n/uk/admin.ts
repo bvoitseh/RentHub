@@ -2,7 +2,14 @@
 export const admin = {
   nav: 'Адміністрування',
   title: 'Адміністрування',
-  tabs: { complaints: 'Скарги', users: 'Користувачі', equipment: 'Оголошення' },
+  tabs: {
+    complaints: 'Скарги',
+    users: 'Користувачі',
+    equipment: 'Оголошення',
+    categories: 'Категорії',
+    settings: 'Комісія',
+    statistics: 'Статистика',
+  },
   searchUsers: 'Ім’я або e-mail',
   searchEquipment: 'Назва оголошення',
   search: 'Знайти',

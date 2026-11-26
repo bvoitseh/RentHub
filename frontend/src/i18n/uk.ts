@@ -1,4 +1,5 @@
 import { admin } from '@/i18n/uk/admin'
+import { adminCatalog } from '@/i18n/uk/adminCatalog'
 import { auth } from '@/i18n/uk/auth'
 import { booking } from '@/i18n/uk/booking'
 import { catalog } from '@/i18n/uk/catalog'
@@ -42,6 +43,7 @@ export const uk = {
     or: 'або',
   },
   admin,
+  adminCatalog,
   auth,
   booking,
   catalog,

@@ -1,6 +1,9 @@
 import { Navigate, NavLink, useParams } from 'react-router'
+import { AdminCategories } from '@/features/admin/components/AdminCategories'
+import { AdminCommission } from '@/features/admin/components/AdminCommission'
 import { AdminComplaints } from '@/features/admin/components/AdminComplaints'
 import { AdminEquipment } from '@/features/admin/components/AdminEquipment'
+import { AdminStatistics } from '@/features/admin/components/AdminStatistics'
 import { AdminUsers } from '@/features/admin/components/AdminUsers'
 import { NotFoundPage } from '@/pages/NotFoundPage'
 import { uk } from '@/i18n/uk'
@@ -9,6 +12,9 @@ const tabs = {
   complaints: AdminComplaints,
   users: AdminUsers,
   equipment: AdminEquipment,
+  categories: AdminCategories,
+  settings: AdminCommission,
+  statistics: AdminStatistics,
 } as const
 type Tab = keyof typeof tabs
 

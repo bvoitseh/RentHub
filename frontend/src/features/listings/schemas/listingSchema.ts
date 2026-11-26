@@ -27,6 +27,7 @@ export const listingSchema = z
     deliveryAvailable: z.boolean(),
     deliveryNote: z.string().trim().max(500, { error: v.deliveryNoteMax }),
     address: z.string().trim().min(1, { error: v.required }).max(300, { error: v.addressMax }),
+    city: z.string().trim().min(1, { error: v.required }).max(100, { error: v.cityMax }),
     point: z.object({ lat: z.number(), lon: z.number() }).nullable(),
   })
   .refine((d) => d.maxDays === '' || Number(d.maxDays) >= Number(d.minDays), { path: ['maxDays'], error: v.maxDaysBelowMin })
@@ -48,6 +49,7 @@ export const emptyListing: ListingInput = {
   deliveryAvailable: false,
   deliveryNote: '',
   address: '',
+  city: '',
   point: null,
 }
 
@@ -65,6 +67,7 @@ export function toListingInput(item: EquipmentDetails): ListingInput {
     deliveryAvailable: item.deliveryAvailable,
     deliveryNote: item.deliveryNote ?? '',
     address: item.address,
+    city: item.city,
     point: { lat: item.lat, lon: item.lon },
   }
 }
@@ -84,6 +87,7 @@ export function toListingPayload(values: ListingInput): ListingPayload {
     deliveryAvailable: values.deliveryAvailable,
     deliveryNote: values.deliveryAvailable && values.deliveryNote ? values.deliveryNote : null,
     address: values.address,
+    city: values.city,
     lat: point.lat,
     lon: point.lon,
   }
