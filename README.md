@@ -58,6 +58,7 @@ precedence. Keys it may contain:
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
 | object storage (FR-4a) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` (defaults match docker-compose and `infra/seaweedfs/s3.json`) |
 | geocoding (FR-4) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` (Nominatim's policy requires an identifying User-Agent with contact info) |
+| recommendations (FR-16, FR-17) | `START_CITY`, `START_CITY_LAT`, `START_CITY_LON` (Lviv), `RECOMMENDATION_RADIUS_KM` (25), `RECOMMENDATION_LIMIT` (12) |
 | reviews (FR-18) | `REVIEW_WINDOW` (default 14d after completion), `REVIEW_REPLY_WINDOW` (14d after publication) |
 | e-mail retries (FR-15a) | `MAIL_RETRY_ATTEMPTS` (default 3; pauses 10 s and 60 s are set in `application.yml`) |
 | booking (FR-10, FR-15b) | `BOOKING_MIN_LEAD_DAYS` (default 1 = from tomorrow), `BOOKING_HORIZON_DAYS` (365), `BOOKING_REQUEST_TTL` (48h) |

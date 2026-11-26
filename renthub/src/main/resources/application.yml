@@ -127,6 +127,13 @@ app:
     request-ttl: ${BOOKING_REQUEST_TTL:48h}
     complete-cron: "0 5 0 * * *"
     expire-cron: "0 0 * * * *"
+  # FR-16, FR-17: start city for guests and as a fallback (another city = configuration), radius and count.
+  recommendations:
+    start-city: ${START_CITY:Львів}
+    start-lat: ${START_CITY_LAT:49.8397}
+    start-lon: ${START_CITY_LON:24.0297}
+    radius-km: ${RECOMMENDATION_RADIUS_KM:25}
+    limit: ${RECOMMENDATION_LIMIT:12}
   # FR-18: review window after completion, reply window after publication, and the job publishing expired windows.
   review:
     window: ${REVIEW_WINDOW:14d}

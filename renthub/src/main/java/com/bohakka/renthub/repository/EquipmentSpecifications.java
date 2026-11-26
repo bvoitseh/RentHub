@@ -181,6 +181,32 @@ public final class EquipmentSpecifications {
 		};
 	}
 
+	public static Specification<Equipment> notOwnedBy(Long userId) {
+		return (root, query, cb) -> cb.notEqual(root.get("owner").get("id"), userId);
+	}
+
+	/**
+	 * Recommendation order (D-44): nearest first, then categories in season in {@code month} (seasons may wrap over New
+	 * Year), then owner rating (unrated last), then newest. Added to the data query only, like {@link #nearestFirst}.
+	 */
+	public static Specification<Equipment> nearestThenSeason(GeoPoint point, int month) {
+		return (root, query, cb) -> {
+			if (!Long.class.equals(query.getResultType())) {
+				Expression<Integer> from = root.get("category").get("seasonFrom");
+				Expression<Integer> to = root.get("category").get("seasonTo");
+				Predicate inSeason = cb.or(
+					cb.and(cb.le(from, to), cb.le(from, month), cb.ge(to, month)),
+					cb.and(cb.gt(from, to), cb.or(cb.le(from, month), cb.ge(to, month))));
+				Expression<BigDecimal> rating = root.get("owner").get("ratingAvg");
+				query.orderBy(cb.asc(distanceKm(root, cb, point)),
+					cb.asc(cb.selectCase().when(inSeason, 0).otherwise(1)),
+					cb.asc(cb.selectCase().when(cb.isNull(rating), 1).otherwise(0)), cb.desc(rating),
+					cb.desc(root.get("createdAt")), cb.desc(root.get("id")));
+			}
+			return cb.conjunction();
+		};
+	}
+
 	private static Expression<Double> distanceKm(Root<Equipment> root, CriteriaBuilder cb, GeoPoint point) {
 		double pointLat = Math.toRadians(point.lat());
 		double pointLon = Math.toRadians(point.lon());

@@ -8,7 +8,13 @@ import { uk } from '@/i18n/uk'
 const t = uk.catalog
 
 /** Catalogue card: cover, title, price per day, category, place or distance, owner label, handover options. */
-export function EquipmentCard({ item }: { item: EquipmentSummary }) {
+export interface EquipmentCardProps {
+  item: EquipmentSummary
+  /** How to word the distance; «… км від вас» by default (the distance is from the user's own point). */
+  distanceText?: (km: number) => string
+}
+
+export function EquipmentCard({ item, distanceText = t.distance }: EquipmentCardProps) {
   return (
     <Link
       to={`/equipment/${item.id}`}
@@ -25,7 +31,7 @@ export function EquipmentCard({ item }: { item: EquipmentSummary }) {
           <p className="text-sm font-medium text-brand-700">{t.totalForPeriod(formatPrice(item.totalPrice))}</p>
         )}
         <p className="line-clamp-1 text-sm text-slate-600">
-          {item.distanceKm !== null ? t.distance(item.distanceKm) : item.address}
+          {item.distanceKm !== null ? distanceText(item.distanceKm) : item.address}
         </p>
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-600">
           <OwnerLabel ownerType={item.owner.ownerType} companyName={item.owner.companyName} />

@@ -29,4 +29,9 @@ public class Category {
 
 	@Column(name = "season_to", nullable = false)
 	private int seasonTo;
+
+	/** FR-17: whether {@code month} (1-12) falls in the season, also when it wraps over New Year (11 -> 2). */
+	public boolean isInSeason(int month) {
+		return seasonFrom <= seasonTo ? month >= seasonFrom && month <= seasonTo : month >= seasonFrom || month <= seasonTo;
+	}
 }
