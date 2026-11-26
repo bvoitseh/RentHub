@@ -33,7 +33,7 @@ New features add classes to these packages; a new package is created only for a 
 | `dto` | request/response records (`RegisterRequest`, `UserResponse`, `EquipmentRequest`, `CatalogQuery`, `EquipmentSummaryResponse`, `EquipmentDetailsResponse`, `PageResponse`, `PublicProfileResponse`, `BookingRequest`, `BookingResponse`, `AvailabilityResponse`, `BookingRef`, `ContactResponse`, …), shared `Validation` constants, `EmailMessage` |
 | `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
 | `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
 | `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
@@ -73,7 +73,12 @@ users, then the booking (D-40 order), and publishes both reviews when the second
 publishes lone reviews after the window. Ratings travel on `OwnerBadge`, booking parties and the public profile;
 the catalogue `rating` sort is `EquipmentSpecifications.bestRatedFirst`.
 
-**Where business rules will live:** season logic in the recommendations service; entity methods guard their own invariants.
+**Recommendations (FR-16, FR-17) in short:** `RecommendationServiceImpl` picks the point (browser location with consent,
+else the geocoded profile city, else the start city from `app.recommendations.*`) outside any transaction, then
+queries public listings within the radius, not the viewer's own, ordered by
+`EquipmentSpecifications.nearestThenSeason` (distance, in season via `Category.isInSeason`, rating, newest; D-44).
+
+**Where business rules live:** entity methods guard their own invariants; services orchestrate use cases.
 
 **Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
 Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions
@@ -157,6 +162,8 @@ src/
                      BookingContact, BlocksManager)
 └─ features/reviews/ types.ts · api/reviewsApi.ts · hooks/useReviews.ts · components/ (Stars, StarInput, ReviewForm,
                      ReviewCard, ReplyForm, BookingReviews in booking rows, UserReviews on profiles and the card)
+└─ features/recommendations/ types.ts · api · hooks/useRecommendations · components/ (Recommendations on the home
+                     page, RecommendationCard with the «Сезон» badge, LocationControl)
 ```
 
 Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via

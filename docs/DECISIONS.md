@@ -355,3 +355,14 @@ author when the target replies (author's choice); (7) the catalogue `rating` sor
 owners by average, unrated last, ties newest), because Spring's `nullsLast()` is not applied and H2 sorts NULL high;
 (8) review headings in the UI avoid putting a name after «про»/«від», which Ukrainian would require to be declined.
 
+## D-44 Recommendations: distance first, own listings excluded (2026-11-26)
+
+**Concerns:** FR-16, FR-17 (ranking "categories currently in season first, then by distance, then by owner
+rating"), FR-3. **Decision:** author's choice — distance is the main criterion: recommendations are ordered by
+distance ascending, then in-season categories, then owner rating (unrated last), then newest; season therefore only
+breaks ties at the same distance and is shown as a «Сезон» badge. "In season" means the current month in Europe/Kyiv
+(seasons may wrap over New Year), no look-ahead. The viewer's own listings are excluded. The point is the browser
+location only for a signed-in user with geolocation consent (never stored; ignored for guests), else the profile city
+geocoded with the existing Nominatim client (cached), else the configured start city (`START_CITY`, `START_CITY_LAT`,
+`START_CITY_LON`; Lviv). Cards word the distance by origin: «від вас» for the user's point, «від центру» for a city.
+
