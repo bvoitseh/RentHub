@@ -3,6 +3,7 @@ import { booking } from '@/i18n/uk/booking'
 import { catalog } from '@/i18n/uk/catalog'
 import { listings } from '@/i18n/uk/listings'
 import { profile } from '@/i18n/uk/profile'
+import { reviews } from '@/i18n/uk/reviews'
 import { validation } from '@/i18n/uk/validation'
 
 /** All Ukrainian UI texts. Feature texts live in src/i18n/uk/<feature>.ts and are composed here. */
@@ -42,5 +43,6 @@ export const uk = {
   catalog,
   listings,
   profile,
+  reviews,
   validation,
 } as const

@@ -29,6 +29,9 @@ export function EquipmentCard({ item }: { item: EquipmentSummary }) {
         </p>
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-600">
           <OwnerLabel ownerType={item.owner.ownerType} companyName={item.owner.companyName} />
+          {item.owner.rating !== null && (
+            <span className="text-amber-600">{uk.reviews.rating(item.owner.rating, item.owner.reviewCount)}</span>
+          )}
           {item.pickupAvailable && <span>{t.card.pickup}</span>}
           {item.deliveryAvailable && <span>{t.card.delivery}</span>}
           {item.quantity > 1 && <span>{t.units(item.quantity)}</span>}

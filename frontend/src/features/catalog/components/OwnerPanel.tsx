@@ -5,7 +5,7 @@ import { uk } from '@/i18n/uk'
 
 const t = uk.catalog.card
 
-/** The owner on the card: name, account type, rating (FR-19; empty until reviews exist), link to the profile. */
+/** The owner on the card: name, account type, rating from published reviews (FR-19), link to the profile. */
 export function OwnerPanel({ owner }: { owner: OwnerBadge }) {
   return (
     <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
