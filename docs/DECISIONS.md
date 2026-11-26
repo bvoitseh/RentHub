@@ -341,3 +341,17 @@ reuse the same notifier.
 author's choice. A reminder that points to a review form that does not exist yet would be misleading, so the reminder
 is implemented in `feature/reviews` together with the form, using `BookingNotifier` and `MailDelivery`.
 
+## D-43 Reviews: details not fixed by the specification (2026-11-26)
+
+**Concerns:** FR-18, FR-19, FR-7, FR-3c. **Decision:** (1) the comment is required (1–1000 characters), as FR-18 says
+"rating 1–5 and a comment"; (2) the rating is stored on the user as `rating_sum` and `review_count` (exact) plus a
+derived `rating_avg` (NULL without published reviews), updated when a review is published under the target's row
+lock, so cards and the rating sort need no aggregation and the average never drifts; (3) when the second side reviews,
+both reviews are published in that transaction; otherwise `ReviewPublicationJob` (hourly) publishes a review once
+completion + window has passed; (4) the review window counts from `completedAt`, the reply window from `publishedAt`;
+(5) the booking's two parties carry their rating, so owners see the renter's rating on requests (author's choice);
+(6) besides the FR-18 reminder at completion, the target is e-mailed when a review about them is published and the
+author when the target replies (author's choice); (7) the catalogue `rating` sort orders with an explicit CASE (rated
+owners by average, unrated last, ties newest), because Spring's `nullsLast()` is not applied and H2 sorts NULL high;
+(8) review headings in the UI avoid putting a name after «про»/«від», which Ukrainian would require to be declined.
+
