@@ -47,6 +47,35 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
 	boolean existsByEquipmentId(Long equipmentId);
 
+	/** FR-23 E2: CONFIRMED/COMPLETED bookings overlapping [from, to]. */
+	@Query(value = """
+		SELECT COUNT(*) FROM bookings b
+		WHERE b.status IN ('CONFIRMED', 'COMPLETED') AND b.date_from <= :to AND b.date_to >= :from""", nativeQuery = true)
+	long countHeldOverlapping(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+	/**
+	 * FR-23 E2: those of them with a covered day on which CONFIRMED/COMPLETED bookings of the listing hold more units
+	 * than its quantity. The busiest day of a booking is its own first day or another booking's first day inside it.
+	 */
+	@Query(value = """
+		SELECT COUNT(*) FROM bookings b JOIN equipment e ON e.id = b.equipment_id
+		WHERE b.status IN ('CONFIRMED', 'COMPLETED') AND b.date_from <= :to AND b.date_to >= :from
+		  AND EXISTS (
+		    SELECT 1 FROM bookings s
+		    WHERE s.equipment_id = b.equipment_id AND s.status IN ('CONFIRMED', 'COMPLETED')
+		      AND s.date_from BETWEEN b.date_from AND b.date_to
+		      AND (SELECT SUM(o.units) FROM bookings o
+		           WHERE o.equipment_id = b.equipment_id AND o.status IN ('CONFIRMED', 'COMPLETED')
+		             AND o.date_from <= s.date_from AND o.date_to >= s.date_from) > e.quantity)""", nativeQuery = true)
+	long countHeldOverlappingWithConflict(@Param("from") LocalDate from, @Param("to") LocalDate to);
+
+	/** FR-23 E4: commission of bookings COMPLETED in [from, to). */
+	@Query("""
+		select coalesce(sum(b.commission), 0) from Booking b
+		where b.status = com.bohakka.renthub.entity.BookingStatus.COMPLETED
+		  and b.completedAt >= :from and b.completedAt < :to""")
+	java.math.BigDecimal sumCommissionCompleted(@Param("from") Instant from, @Param("to") Instant to);
+
 	/** FR-20: ids of NEW/CONFIRMED bookings starting after {@code today} where the user is renter or owner. */
 	@Query("""
 		select b.id from Booking b

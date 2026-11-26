@@ -41,7 +41,7 @@ public class EquipmentMapper {
 		return new EquipmentDetailsResponse(e.getId(), e.getTitle(), e.getDescription(),
 			CategoryResponse.from(e.getCategory()), e.getCondition(), e.getPricePerDay(), e.getQuantity(),
 			e.getMinDays(), e.getMaxDays(), e.isPickupAvailable(), e.isDeliveryAvailable(), e.getDeliveryNote(),
-			e.getAddress(), e.getLat(), e.getLon(), e.getStatus(), photos(e), owner(e.getOwner()),
+			e.getAddress(), e.getCity(), e.getLat(), e.getLon(), e.getStatus(), photos(e), owner(e.getOwner()),
 			viewerId != null && e.isOwnedBy(viewerId), e.getCreatedAt());
 	}
 

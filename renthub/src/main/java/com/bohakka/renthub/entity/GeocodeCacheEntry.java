@@ -26,17 +26,19 @@ public class GeocodeCacheEntry {
 	private Double lat;
 	private Double lon;
 	private String displayName;
+	private String city;
 
 	@TimeToLive
 	private Long ttlSeconds;
 
-	public static GeocodeCacheEntry found(String query, double lat, double lon, String displayName) {
+	public static GeocodeCacheEntry found(String query, double lat, double lon, String displayName, String city) {
 		GeocodeCacheEntry entry = new GeocodeCacheEntry();
 		entry.query = query;
 		entry.found = true;
 		entry.lat = lat;
 		entry.lon = lon;
 		entry.displayName = displayName;
+		entry.city = city;
 		entry.ttlSeconds = FOUND_TTL_SECONDS;
 		return entry;
 	}

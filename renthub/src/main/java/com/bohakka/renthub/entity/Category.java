@@ -1,5 +1,6 @@
 package com.bohakka.renthub.entity;
 
+import com.bohakka.renthub.exception.BusinessRuleException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,6 +30,20 @@ public class Category {
 
 	@Column(name = "season_to", nullable = false)
 	private int seasonTo;
+
+	public Category(String name, int seasonFrom, int seasonTo) {
+		change(name, seasonFrom, seasonTo);
+	}
+
+	/** FR-22: name and season (months 1-12; may wrap over New Year). */
+	public void change(String name, int seasonFrom, int seasonTo) {
+		if (seasonFrom < 1 || seasonFrom > 12 || seasonTo < 1 || seasonTo > 12) {
+			throw new BusinessRuleException("category.season_invalid", "category.season_invalid");
+		}
+		this.name = name.trim();
+		this.seasonFrom = seasonFrom;
+		this.seasonTo = seasonTo;
+	}
 
 	/** FR-17: whether {@code month} (1-12) falls in the season, also when it wraps over New Year (11 -> 2). */
 	public boolean isInSeason(int month) {

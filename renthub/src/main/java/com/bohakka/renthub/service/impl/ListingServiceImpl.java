@@ -56,7 +56,7 @@ public class ListingServiceImpl implements ListingService {
 			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
 		access.assertMayPublish(owner);
 		Equipment listing = new Equipment(owner, category(request.categoryId()), request.title(), request.description(),
-			request.condition(), terms(request), request.address(), new GeoPoint(request.lat(), request.lon()),
+			request.condition(), terms(request), request.address(), request.city(), new GeoPoint(request.lat(), request.lon()),
 			clock.instant());
 		equipment.save(listing);
 		return mapper.details(listing, ownerId);
@@ -74,7 +74,7 @@ public class ListingServiceImpl implements ListingService {
 		listing.describe(category(request.categoryId()), request.title(), request.description(), request.condition(),
 			clock.instant());
 		listing.applyTerms(terms, clock.instant());
-		listing.relocate(request.address(), new GeoPoint(request.lat(), request.lon()), clock.instant());
+		listing.relocate(request.address(), request.city(), new GeoPoint(request.lat(), request.lon()), clock.instant());
 		return mapper.details(listing, ownerId);
 	}
 

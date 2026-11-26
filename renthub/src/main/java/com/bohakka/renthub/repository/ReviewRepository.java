@@ -15,6 +15,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface ReviewRepository extends JpaRepository<Review, Long> {
 
+	/** FR-23 E3: average rating and number of reviews published in [from, to): one row [avg, count]. */
+	@Query("select avg(r.rating), count(r) from Review r where r.publishedAt >= :from and r.publishedAt < :to")
+	List<Object[]> ratingPublishedBetween(@Param("from") java.time.Instant from, @Param("to") java.time.Instant to);
+
 	/** Both sides' reviews of one booking (0–2). */
 	@EntityGraph(attributePaths = {"author", "target"})
 	List<Review> findByBookingId(Long bookingId);
