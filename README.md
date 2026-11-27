@@ -90,6 +90,24 @@ elsewhere. Demo logins: `seed.olena@example.com`, `seed.andrii@example.com`, `se
 `seed.taras@example.com`, `seed.budprokat@example.com` (company), `seed.fotozona@example.com` (company), all with the
 password `Password123`. The example.com addresses never receive mail.
 
+### Regions and settlements (reference data)
+
+Regions and settlements of Ukraine (D-48) are reference data in migrations V11 and V12, generated from OpenStreetMap
+(© OpenStreetMap contributors, ODbL 1.0) and Wikidata (legal status, CC0). The app never calls an external service for
+them. To refresh, rarely and by hand:
+
+```bash
+python infra/osm/export_settlements.py      # Overpass export, resumable, cache in infra/osm/cache (git-ignored)
+python infra/osm/wikidata_status.py         # legal status from Wikidata, resumable
+python infra/osm/build_reference.py --report                     # counts per region, remaining ambiguous labels
+python infra/osm/build_reference.py --refresh-sql renthub/src/main/resources/db/migration/V<next>__refresh_settlements.sql
+```
+
+The refresh migration matches rows by OSM id: new settlements are inserted, renamed or changed ones updated, and
+those missing from the export marked inactive (hidden from search). Nothing is deleted, so profiles and listings keep
+their settlement. Delete `infra/osm/cache` first to fetch fresh data; the scripts use only the Python standard library
+and respect the Overpass / Wikidata usage policies (sequential queries, pauses, identifying User-Agent).
+
 ## Build and checks
 
 ```bash

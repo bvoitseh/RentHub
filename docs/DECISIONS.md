@@ -400,3 +400,36 @@ had been archived. Locks: the user's listings → the user → each booking (D-4
   form takes the city, town or village from the result; the owner confirms or corrects it. Existing rows (all seed
   data in Lviv) are set to «Львів» by the migration, and the dev seed script includes the city.
 
+## D-48 Structured addresses: regions and settlements from OpenStreetMap, legal status from Wikidata (2026-11-27)
+
+**Concerns:** FR-1, FR-4, FR-16, FR-17, FR-23 (E5), NFR-5, NFR-13. **Problem:** free-text cities were geocoded by
+name, and Nominatim answered «Львів» with a village in Dnipropetrovsk oblast. **Decisions (author's):**
+- **Source:** OpenStreetMap, exported once through the public Overpass API (approved one-off, sequential queries with
+  pauses, backoff and an identifying User-Agent; `infra/osm/export_settlements.py`), and the legal status of each
+  settlement from Wikidata P31 (`infra/osm/wikidata_status.py`). KATOTTH (2021 file only), Nova Poshta, Ukrposhta
+  (contract) and Google were rejected. Data © OpenStreetMap contributors, **ODbL 1.0**; Wikidata **CC0** — the
+  attribution is shown in the site footer and on the map (and goes on the privacy page once that page is merged).
+- **Content** (`infra/osm/build_reference.py`, generated into V12): the 27 regions with an ISO 3166-2 code; nodes
+  `place=city|town|village|hamlet` with a Ukrainian name (`name:uk`, or the plain name in the Ukrainian alphabet), one
+  row per OSM id, coordinates required. District (admin_level 6) and territorial community (admin_level 7) by a local
+  point-in-polygon test over 2020 Ukrainian boundaries only (tagged `katotth`, newest relation per code — this drops
+  the Russian-era Crimean units). Status місто / селище / село from Wikidata, Ukraine-specific classes winning a
+  conflict; unclear → no status (never the OSM size). Postal code: the node's single five-digit `postal_code`.
+  Result: 29,752 settlements (449 міст, 1,473 селищ, 27,117 сіл, 713 without status).
+- **Label:** «с. Назва, Район р-н»; the community is added only when name + district is ambiguous; if still ambiguous,
+  the postal code follows the name (author's choice). 13 labels (26 rows) remain identical — the same village mapped
+  twice in OSM.
+- **Use:** profile = region + settlement only (NFR-5); listing = region + settlement + street/house + optional postal
+  code (5 digits, prefilled, editable; a new suggestion replaces an earlier suggestion, never a typed code).
+  Suggestions come only from our database: case- and apostrophe-insensitive prefix, ≥ 2 characters, ≤ 20 results,
+  cities first, Ukrainian collation. Profile recommendations use the settlement's own coordinates (no geocoding).
+  Nominatim is used only for the listing street: structured search (street, city = settlement, state = region except
+  Kyiv / Sevastopol); the postal code comes from the settlement's OSM code for villages and селища, from the street
+  result for cities (falling back to the OSM code); without a street match the pin is the settlement centre and the
+  owner moves it. `users.city` and `equipment.city` stay as copies of the settlement name.
+- **Existing data (V13):** users → «м. Львів»; listings → Львів, or the suburb named at the start of the demo address
+  (Винники, Брюховичі, Пустомити, Городок, Жовква), the prefix removed from the address.
+- **Refresh:** `build_reference.py --refresh-sql` writes a migration that matches rows by OSM id (MERGE), inserts new
+  ones, updates renamed ones and marks rows missing from the export inactive; nothing is deleted, so users and
+  listings keep their references (README). Tested on H2 and PostgreSQL 18.
+- `User.settlement` is loaded eagerly (reference data, needed when the account is returned outside a transaction).

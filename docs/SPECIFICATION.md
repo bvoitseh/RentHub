@@ -20,9 +20,11 @@ Requirement IDs (FR-n, NFR-n) are stable — reference them in commit messages, 
 
 | Entity | Fields | Notes |
 |---|---|---|
-| User | id, name, email (unique), emailVerified, phone, passwordHash, role, city, geoConsent, blocked, deactivatedAt, ownerType? (`PRIVATE`/`COMPANY`), companyName?, edrpou? | roles: `RENTER`, `OWNER`, `ADMIN`; owner type fields apply to owners only (FR-1a); `deactivatedAt` set = account deactivated by the user (FR-3c) |
+| User | id, name, email (unique), emailVerified, phone, passwordHash, role, settlement (region + settlement; city = its name), geoConsent, blocked, deactivatedAt, ownerType? (`PRIVATE`/`COMPANY`), companyName?, edrpou? | roles: `RENTER`, `OWNER`, `ADMIN`; owner type fields apply to owners only (FR-1a); `deactivatedAt` set = account deactivated by the user (FR-3c) |
 | Category | id, name (unique), seasonFrom, seasonTo (months 1–12) | a season may wrap over New Year (e.g. 11→2) |
-| Equipment | id, owner, category, title, description, condition, pricePerDay, quantity (≥ 1), minDays, maxDays?, pickupAvailable, deliveryAvailable, deliveryNote?, address, city, lat, lon, status | status: `ACTIVE`, `ARCHIVED`, `BLOCKED`; `city` is suggested by geocoding (city / town / village) and confirmed or corrected by the owner (FR-23 E5) |
+| Equipment | id, owner, category, title, description, condition, pricePerDay, quantity (≥ 1), minDays, maxDays?, pickupAvailable, deliveryAvailable, deliveryNote?, settlement, address (street and house), postalCode?, city, lat, lon, status | status: `ACTIVE`, `ARCHIVED`, `BLOCKED`; `city` is the settlement's name (FR-23 E5); `postalCode` is optional, five digits (D-48) |
+| Region | id, osmId, isoCode, name, active | 24 oblasts, Crimea, Kyiv, Sevastopol — reference data from OpenStreetMap (D-48) |
+| Settlement | id, osmId, region, name, status? (`CITY`/`TOWN`/`VILLAGE`), district?, community?, label, lat, lon, postalCode?, active | reference data: OpenStreetMap (ODbL) + Wikidata legal status (CC0); refreshed by OSM id, missing rows become inactive, never deleted (D-48) |
 | EquipmentPhoto | id, equipment, storageKey, position | 1–5 photos per listing, stored in S3-compatible object storage |
 | EmailToken | id, user, type (`VERIFY_EMAIL`, `RESET_PASSWORD`), tokenHash, expiresAt, usedAt | single-use; store only a hash of the token |
 | AvailabilityBlock | id, equipment, dateFrom, dateTo, reason | period the owner closed for rental |
@@ -38,7 +40,7 @@ Conventions: a rental period is `[dateFrom, dateTo]` with **`dateTo` inclusive**
 ## 2. Functional requirements
 
 ### Accounts
-- **FR-1** Register with name, email, phone, password, city and role (renter or owner); email must be unique. A verification e-mail with a single-use link (valid 24 h) is sent; an unverified user may log in and browse but cannot create listings or booking requests until the e-mail is verified. Provide "resend verification".
+- **FR-1** Register with name, email, phone, password, region + settlement (picked from the list, D-48) and role (renter or owner); email must be unique. A verification e-mail with a single-use link (valid 24 h) is sent; an unverified user may log in and browse but cannot create listings or booking requests until the e-mail is verified. Provide "resend verification".
 - **FR-1a** An owner specifies the owner type: private person or company. For a company, the company name and ЄДРПОУ code (exactly 8 digits) are required. Listing cards and the owner profile show a "Компанія" / "Приватна особа" label with the company name; the catalogue can be filtered by owner type. The type is editable in the profile.
 - **FR-2** Log in with email and password; access to features depends on the role. A blocked user cannot log in. Nobody can register as `ADMIN`.
 - **FR-2a** The first administrator is created at application start-up from environment variables (`ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME`) if no `ADMIN` exists yet; the account is created already verified. Without these variables no admin is created (log a warning). The password is never logged.
@@ -48,7 +50,7 @@ Conventions: a rental period is `[dateFrom, dateTo]` with **`dateTo` inclusive**
 - **FR-3c** Account deactivation: a user can deactivate their own account (password confirmation required). It is **forbidden while the user has active bookings** — as renter or as owner, any `NEW` or `CONFIRMED` booking whose `dateTo ≥ today`; the response lists them. On deactivation: sessions are invalidated, the user's listings are hidden from the catalogue and recommendations (their status is kept), the profile and reviews show the user as "deactivated", no e-mails are sent to them. Data is retained. **Restoration:** logging in with correct credentials to a deactivated account offers "Restore account"; after confirmation `deactivatedAt` is cleared and listings reappear. A blocked (by admin) account cannot be restored by the user.
 
 ### Catalogue
-- **FR-4** An owner creates a listing: title, description, category, condition, price per day, 1–5 photos and an address. The backend **geocodes the address** (OpenStreetMap Nominatim) into coordinates; the owner sees the point on a map and may correct it by moving the pin. If geocoding fails, the owner must place the pin manually.
+- **FR-4** An owner creates a listing: title, description, category, condition, price per day, 1–5 photos and an address: region + settlement from the list, street and house, optional postal code (5 digits). The backend **geocodes the street within that settlement and region** (OpenStreetMap Nominatim, structured search) into coordinates and suggests the postal code — for villages and селища the settlement's own code, for cities the street result's code (D-48); if the street is not found the pin starts at the settlement centre; the owner sees the point on a map and may correct it by moving the pin. If geocoding fails, the owner must place the pin manually.
 - **FR-4a** Photo upload: JPEG/PNG/WebP, ≤ 5 MB each, validated by content type and size on the server, stored in **S3-compatible object storage** (the database keeps only the storage keys), served via public/pre-signed URLs; replacing or deleting a photo removes the stored object. Image size is limited to protect the storage.
 - **FR-4b** Rental terms per listing: minimum rental period `minDays` (default 1) and optional maximum `maxDays` (`1 ≤ minDays ≤ maxDays`); handover options — pickup and/or delivery (at least one must be enabled); for delivery an optional free-text note about terms/cost (e.g. "delivery within Lviv, cost by agreement"). Delivery cost is not calculated by the platform and is not part of `totalPrice`.
 - **FR-4c** A listing has a **quantity** of identical units (default 1), e.g. a rental point with 5 identical drills. A booking request is for a number of `units` (1…quantity).
@@ -81,7 +83,7 @@ Conventions: a rental period is `[dateFrom, dateTo]` with **`dateTo` inclusive**
 Booking validation: only future dates (`dateFrom` no earlier than tomorrow — configurable), `dateTo ≥ dateFrom`, number of days within the listing's `minDays`…`maxDays`; the chosen handover mode must be offered by the listing; only `ACTIVE` equipment; an owner cannot book their own equipment.
 
 ### Recommendations
-- **FR-16** Determine the user's location: browser coordinates if consent is given (**never persisted**, passed per request only), otherwise the profile city; guests get the start city.
+- **FR-16** Determine the user's location: browser coordinates if consent is given (**never persisted**, passed per request only), otherwise the profile settlement's coordinates (from the reference data, no geocoding); guests get the start city.
 - **FR-17** Recommend active equipment within a radius (default 25 km, haversine distance). Ranking: categories currently in season first, then by distance ascending, then by owner rating. Default limit 12. Shown on the home page.
 
 ### Ratings and reviews
@@ -144,7 +146,7 @@ Ownership rules (enforced in the service layer, not only in the UI): only a list
 
 ### Main screens
 
- Home (search, categories, "Recommendations nearby"), Catalogue (filters), Equipment card (photo gallery, map with the pin, calendar, booking form with instant price and conflict message, reviews, "Report"), Register/Login/Profile (phone, city, consent, deactivate account), Verify e-mail, Forgot/Reset password, My bookings (with the other party's phone after confirmation), Owner dashboard (listings with photo upload and a map pin editor, calendar, incoming requests), Admin (moderation, complaints, categories, commission, statistics).
+ Home (search, categories, "Recommendations nearby"), Catalogue (filters), Equipment card (photo gallery, map with the pin, calendar, booking form with instant price and conflict message, reviews, "Report"), Register/Login/Profile (phone, region + settlement, consent, deactivate account), Verify e-mail, Forgot/Reset password, My bookings (with the other party's phone after confirmation), Owner dashboard (listings with photo upload and a map pin editor, calendar, incoming requests), Admin (moderation, complaints, categories, commission, statistics).
 
 ## 5. API outline (`/api/v1`, JSON, ISO-8601 dates)
 
@@ -158,7 +160,8 @@ Ownership rules (enforced in the service layer, not only in the UI): only a list
 | `GET /equipment`, `GET /equipment/{id}` | catalogue (filters: `q`, `categoryId`, `priceMin`/`priceMax`, `dateFrom`/`dateTo`, `units`, `lat`/`lon`/`radiusKm`, `pickup`, `delivery`, `ownerType`; `sort`: `price,asc\|desc`, `distance`, `rating`; `page`), card | guest |
 | `POST/PUT/DELETE /equipment[/{id}]`, `POST /equipment/{id}/archive` | manage listings | owner (own) |
 | `POST /equipment/{id}/photos`, `DELETE /equipment/{id}/photos/{photoId}` | photo upload / removal | owner (own) |
-| `GET /geocode?q=` | address → coordinates preview for the map pin | owner |
+| `GET /regions`, `GET /settlements?regionId&q` | regions; settlement suggestions (prefix, ≥ 2 characters, ≤ 20, from our database only) | all |
+| `GET /geocode?settlementId&street` | pin and postal-code suggestion for a listing address | owner |
 | `GET /equipment/{id}/availability?from&to` | availability + occupied ranges | guest |
 | `GET/POST/DELETE /equipment/{id}/blocks` | calendar | owner |
 | `POST /bookings`; `GET /bookings/my`, `/bookings/incoming` | requests, lists | authenticated |
