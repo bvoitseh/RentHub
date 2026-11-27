@@ -12,9 +12,9 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 
 | Part | Technology |
 |---|---|
-| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode), Gradle |
+| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode) locally, PostgreSQL in production, Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens, geocoding cache), SeaweedFS (S3 photo storage) |
+| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens, geocoding cache), SeaweedFS (S3 photo storage); production adds Nginx and the backend image |
 
 ## Prerequisites
 
@@ -51,7 +51,8 @@ precedence. Keys it may contain:
 
 | Group | Keys |
 |---|---|
-| server / app | `SERVER_PORT`, `APP_BASE_URL` |
+| server / app | `SERVER_PORT`, `APP_BASE_URL`, `LOG_LEVEL` (default `DEBUG`), `SESSION_COOKIE_SECURE` (default `false`) |
+| database (D-47) | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` (unset = local file H2), `H2_CONSOLE_ENABLED` (default `true`) |
 | Redis | `REDIS_HOST`, `REDIS_PORT` (defaults `localhost`, `6379`) |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
@@ -99,8 +100,86 @@ cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file)
 
 ## Configuration
 
-One configuration for everything, no Spring profiles (educational project, see `docs/DECISIONS.md` D-17): embedded H2
-in PostgreSQL mode, H2 console, outgoing e-mail through the `SMTP_*` relay from `dev.env`.
+One configuration for everything, no Spring profiles (`docs/DECISIONS.md` D-17): locally embedded H2 in PostgreSQL
+mode, H2 console, outgoing e-mail through the `SMTP_*` relay from `dev.env`. Production is the same application with
+other environment variables (PostgreSQL, no H2 console, INFO logs; D-47), see "Deploy" below.
+
+## Deploy (production)
+
+One server (VPS) with Docker. `docker-compose.prod.yml` runs:
+
+| Service | Image | Role |
+|---|---|---|
+| `frontend` | built from `frontend/Dockerfile` (Node → `nginx:1.28-alpine`) | serves the SPA on port 80, proxies `/api` to the backend and `/photos` (read-only) to SeaweedFS, security headers |
+| `backend` | built from `renthub/Dockerfile` (`eclipse-temurin:25-jre-alpine`, non-root) | Spring Boot; healthcheck on `/actuator/health` (not exposed through Nginx) |
+| `redis` | `redis:8.2.11-alpine` | rate limits, e-mail link tokens, geocoding cache |
+| `s3`, `s3-init` | `chrislusf/seaweedfs:4.50` | photo storage with a persistent volume; `s3-init` creates the bucket |
+
+PostgreSQL is **not** in the compose file: the backend connects to an existing PostgreSQL server (database already
+created). On the first start Flyway creates all tables, so the database's `public` schema must be empty then.
+
+1. Install Docker Engine with the Compose plugin; clone the repository (e.g. to `/opt/renthub`).
+2. Create `prod.env` in the repository root (git-ignored, never commit it):
+
+   ```properties
+   DB_URL=jdbc:postgresql://host.docker.internal:5432/renthub
+   DB_USERNAME=renthub_user
+   DB_PASSWORD=...
+   APP_BASE_URL=http://your-domain
+   S3_PUBLIC_URL=http://your-domain/photos
+   S3_ACCESS_KEY=...            # any random values; SeaweedFS is configured from them
+   S3_SECRET_KEY=...
+   ADMIN_EMAIL=...              # the preset administrator (FR-2a)
+   ADMIN_PASSWORD=...
+   SMTP_HOST=...                # SMTP relay; SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_AUTH, SMTP_STARTTLS
+   NOMINATIM_USER_AGENT=RentHub/1.0 (contact e-mail)
+   PG_CONTAINER=...             # for backups: PostgreSQL container, database and role
+   PG_DB=renthub
+   PG_USER=...
+   ```
+
+   Optional: `HTTP_PORT` (default 80), `LOG_LEVEL` (INFO), `S3_BUCKET`, `CSP_IMG_SRC_EXTRA` (origin of an external S3
+   provider's public URL, added to the Content-Security-Policy), `BACKUP_DIR` (`./backups`), `RETENTION_DAYS` (14) and
+   every key from the configuration table above.
+3. Point the backend at PostgreSQL, one of:
+   - **PostgreSQL published on the host** (e.g. a container started with `-p 5432:5432`): keep
+     `DB_URL=jdbc:postgresql://host.docker.internal:5432/<db>`; the compose file maps `host.docker.internal` to the host
+     (`extra_hosts: host-gateway`). On Linux PostgreSQL must listen on the Docker bridge address too and `pg_hba.conf`
+     must allow the Docker subnet.
+   - **PostgreSQL container on a Docker network:** set `PG_NETWORK=<network name>` and
+     `DB_URL=jdbc:postgresql://<postgres container name>:5432/<db>`, then add the override file to every command:
+     `-f docker-compose.prod.yml -f docker-compose.prod.pgnet.yml`.
+4. Start: `docker compose --env-file prod.env -f docker-compose.prod.yml up -d --build`, then check
+   `docker compose -f docker-compose.prod.yml ps` (backend `healthy`) and open `http://your-domain`.
+5. Update: `git pull`, then the same `up -d --build`; Flyway applies new migrations on start.
+
+### Backups and restore (NFR-2)
+
+`infra/backup/backup.sh` writes `BACKUP_DIR/<db>_<date>.sql.gz` with `pg_dump` run inside the PostgreSQL container
+(settings `PG_CONTAINER`, `PG_DB`, `PG_USER` from `prod.env`) and deletes dumps older than `RETENTION_DAYS` days. Daily
+at 03:30 via cron:
+
+```cron
+30 3 * * * cd /opt/renthub && ./infra/backup/backup.sh >> /var/log/renthub-backup.log 2>&1
+```
+
+Restore — always into a **new** database first, never over the live one:
+
+```bash
+docker exec <pg container> createdb -U <role> renthub_restore
+gunzip -c backups/renthub_<date>.sql.gz | docker exec -i <pg container> psql -U <role> -d renthub_restore -v ON_ERROR_STOP=1
+docker exec <pg container> psql -U <role> -d renthub_restore -c "select count(*) from flyway_schema_history"
+```
+
+To put it into service, stop the stack, point `DB_URL` at `renthub_restore` (or rename the databases while the
+stack is stopped) and start it again.
+
+### Enabling HTTPS
+
+Not configured yet: the site is served over plain HTTP (D-47). When a domain and certificate exist, follow the TODO in
+`infra/nginx/renthub.conf.template` (listen on 443 with the certificate, redirect port 80, add HSTS), publish port 443
+in `docker-compose.prod.yml`, and set `SESSION_COOKIE_SECURE=true` and `https://` URLs in `APP_BASE_URL` and
+`S3_PUBLIC_URL`.
 
 ## Git workflow
 

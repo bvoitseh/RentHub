@@ -31,6 +31,9 @@ dependencies {
 	implementation 'software.amazon.awssdk:s3:2.57.10'
 
 	runtimeOnly 'com.h2database:h2'
+	// Production database (D-47): PostgreSQL JDBC driver (BSD-2-Clause) and Flyway's PostgreSQL support (Apache-2.0).
+	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'org.flywaydb:flyway-database-postgresql'
 	runtimeOnly 'org.springframework.boot:spring-boot-h2console'
 
 	compileOnly 'org.projectlombok:lombok'

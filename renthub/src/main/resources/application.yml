@@ -1,5 +1,6 @@
-# Single configuration (no Spring profiles, see DECISIONS.md D-17): embedded H2 in PostgreSQL mode (file-based so data
-# survives restarts), H2 console, e-mail through an SMTP relay configured by the SMTP_* variables (dev.env).
+# Single configuration without Spring profiles (DECISIONS.md D-17, D-47). Locally: embedded H2 in PostgreSQL mode
+# (file-based), H2 console, DEBUG logs. Production sets DB_URL / DB_USERNAME / DB_PASSWORD (PostgreSQL),
+# H2_CONSOLE_ENABLED=false, LOG_LEVEL=INFO and the other variables from prod.env (README, "Deploy").
 spring:
   application:
     name: renthub
@@ -9,13 +10,14 @@ spring:
     # variables take precedence over the file.
     import: optional:file:./dev.env[.properties],optional:file:../dev.env[.properties]
   datasource:
-    url: jdbc:h2:file:./data/renthub;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE
-    username: sa
-    password: ""
-    driver-class-name: org.h2.Driver
+    # The driver follows the URL: H2 by default, PostgreSQL when DB_URL is jdbc:postgresql://... (D-47).
+    url: ${DB_URL:jdbc:h2:file:./data/renthub;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
   h2:
     console:
-      enabled: true
+      # Development tool only; production must set H2_CONSOLE_ENABLED=false (NFR-4).
+      enabled: ${H2_CONSOLE_ENABLED:true}
       path: /h2-console
   jpa:
     open-in-view: false
@@ -67,6 +69,8 @@ spring:
 
 server:
   port: ${SERVER_PORT:8080}
+  # Behind Nginx: trust X-Forwarded-* from the proxy (Tomcat RemoteIpValve, internal addresses only).
+  forward-headers-strategy: native
   servlet:
     session:
       timeout: 7d
@@ -74,7 +78,8 @@ server:
         name: RENTHUB_SESSION
         http-only: true
         same-site: lax
-        secure: false
+        # NFR-4: switch on (SESSION_COOKIE_SECURE=true) once the site is served over HTTPS.
+        secure: ${SESSION_COOKIE_SECURE:false}
   error:
     include-message: never
     include-stacktrace: never
@@ -96,7 +101,7 @@ management:
 
 logging:
   level:
-    com.bohakka.renthub: DEBUG
+    com.bohakka.renthub: ${LOG_LEVEL:DEBUG}
 
 app:
   base-url: ${APP_BASE_URL:http://localhost:5173}
