@@ -8,6 +8,7 @@ import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
@@ -27,8 +28,9 @@ public record EquipmentRequest(
 		boolean pickupAvailable,
 		boolean deliveryAvailable,
 		@Size(max = 500) String deliveryNote,
+		@NotNull Long settlementId,
 		@NotBlank @Size(max = 300) String address,
-		@NotBlank @Size(max = 100) String city,
+		@Pattern(regexp = "\\d{5}", message = "{validation.postal_code}") String postalCode,
 		@NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
 		@NotNull @DecimalMin("-180") @DecimalMax("180") Double lon) {
 }

@@ -12,6 +12,7 @@ import com.bohakka.renthub.repository.BookingRepository;
 import com.bohakka.renthub.repository.UserRepository;
 import com.bohakka.renthub.security.SessionEstablisher;
 import com.bohakka.renthub.security.SessionTerminator;
+import com.bohakka.renthub.service.AddressService;
 import com.bohakka.renthub.service.AccountService;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
@@ -32,6 +33,7 @@ public class AccountServiceImpl implements AccountService {
 	private final PasswordEncoder passwordEncoder;
 	private final SessionTerminator sessionTerminator;
 	private final SessionEstablisher sessions;
+	private final AddressService addresses;
 	private final Clock clock;
 
 	@Override
@@ -44,7 +46,7 @@ public class AccountServiceImpl implements AccountService {
 	@Transactional
 	public User updateProfile(Long userId, ProfileUpdateRequest request) {
 		User user = get(userId);
-		user.updateProfile(request.name(), request.phone(), request.city());
+		user.updateProfile(request.name(), request.phone(), addresses.settlement(request.settlementId()));
 		if (request.ownerType() != null) {
 			user.assignOwnerType(request.ownerType(), request.companyName(), request.edrpou());
 		}

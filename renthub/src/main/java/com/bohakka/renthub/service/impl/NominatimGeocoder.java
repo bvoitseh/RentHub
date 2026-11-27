@@ -39,18 +39,19 @@ public class NominatimGeocoder implements Geocoder {
 	}
 
 	@Override
-	public Optional<GeocodeResponse> geocode(String address) {
-		String key = address.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+	public Optional<GeocodeResponse> geocode(String street, String settlement, String region) {
+		String key = String.join("|", street, settlement, region == null ? "" : region).trim().replaceAll("\\s+", " ")
+			.toLowerCase(Locale.ROOT);
 		Optional<GeocodeCacheEntry> cached = cache.findById(key);
 		if (cached.isPresent()) {
 			GeocodeCacheEntry entry = cached.get();
 			return entry.isFound()
-				? Optional.of(new GeocodeResponse(entry.getLat(), entry.getLon(), entry.getDisplayName(), entry.getCity()))
+				? Optional.of(new GeocodeResponse(entry.getLat(), entry.getLon(), entry.getDisplayName(), entry.getPostalCode()))
 				: Optional.empty();
 		}
 		try {
-			Optional<GeocodeResponse> result = search(address.trim());
-			cache.save(result.map(r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName(), r.city()))
+			Optional<GeocodeResponse> result = search(street, settlement, region);
+			cache.save(result.map(r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName(), r.postalCode()))
 				.orElseGet(() -> GeocodeCacheEntry.miss(key)));
 			return result;
 		} catch (RestClientException | NumberFormatException ex) {
@@ -59,10 +60,12 @@ public class NominatimGeocoder implements Geocoder {
 		}
 	}
 
-	private Optional<GeocodeResponse> search(String address) {
+	/** Structured search (street + city + state), so a same-named settlement elsewhere is never picked (D-48). */
+	private Optional<GeocodeResponse> search(String street, String settlement, String region) {
 		waitForSlot();
 		Place[] places = nominatim.get()
-			.uri(uri -> uri.path("/search").queryParam("q", address).queryParam("format", "jsonv2")
+			.uri(uri -> uri.path("/search").queryParam("street", street).queryParam("city", settlement)
+				.queryParamIfPresent("state", Optional.ofNullable(region)).queryParam("format", "jsonv2")
 				.queryParam("limit", 1).queryParam("addressdetails", 1).queryParam("countrycodes", properties.countryCodes())
 				.queryParam("accept-language", "uk").build())
 			.retrieve()
@@ -72,7 +75,7 @@ public class NominatimGeocoder implements Geocoder {
 		}
 		Place place = places[0];
 		return Optional.of(new GeocodeResponse(Double.parseDouble(place.lat()), Double.parseDouble(place.lon()),
-			place.displayName(), place.address() == null ? null : place.address().settlement()));
+			place.displayName(), place.address() == null ? null : place.address().singlePostcode()));
 	}
 
 	/** NFR-13: at most one Nominatim request per second; concurrent callers queue here. */
@@ -92,11 +95,11 @@ public class NominatimGeocoder implements Geocoder {
 	private record Place(String lat, String lon, @JsonProperty("display_name") String displayName, Address address) {
 	}
 
-	/** Nominatim names the settlement by its kind; the first one present is the listing's city (D-46). */
-	private record Address(String city, String town, String village) {
+	private record Address(String postcode) {
 
-		String settlement() {
-			return city != null ? city : town != null ? town : village;
+		/** Only a single five-digit code is useful as a suggestion (D-48). */
+		String singlePostcode() {
+			return postcode != null && postcode.matches("\\d{5}") ? postcode : null;
 		}
 	}
 }

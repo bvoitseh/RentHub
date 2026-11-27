@@ -13,6 +13,7 @@ public record UserResponse(
 		String phone,
 		Role role,
 		String city,
+		SettlementResponse settlement,
 		boolean geoConsent,
 		OwnerType ownerType,
 		String companyName,
@@ -20,7 +21,7 @@ public record UserResponse(
 
 	public static UserResponse from(User user) {
 		return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.isEmailVerified(), user.getPhone(),
-			user.getRole(), user.getCity(), user.isGeoConsent(), user.getOwnerType(), user.getCompanyName(),
+			user.getRole(), user.getCity(), SettlementResponse.from(user.getSettlement()), user.isGeoConsent(), user.getOwnerType(), user.getCompanyName(),
 			user.getEdrpou());
 	}
 }

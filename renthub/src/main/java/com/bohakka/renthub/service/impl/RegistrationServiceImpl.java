@@ -8,6 +8,7 @@ import com.bohakka.renthub.event.VerificationEmailRequested;
 import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.properties.RateLimitProperties;
 import com.bohakka.renthub.repository.UserRepository;
+import com.bohakka.renthub.service.AddressService;
 import com.bohakka.renthub.service.EmailTokenService;
 import com.bohakka.renthub.service.RateLimiter;
 import com.bohakka.renthub.service.RegistrationService;
@@ -31,6 +32,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 	private final RateLimiter rateLimiter;
 	private final RateLimitProperties limits;
 	private final ApplicationEventPublisher events;
+	private final AddressService addresses;
 	private final Clock clock;
 
 	@Override
@@ -42,7 +44,7 @@ public class RegistrationServiceImpl implements RegistrationService {
 			throw new ConflictException("user.email_taken", "user.email_taken");
 		}
 		User user = new User(request.name(), email, request.phone(), passwordEncoder.encode(request.password()),
-			Role.USER, request.city(), clock.instant());
+			Role.USER, addresses.settlement(request.settlementId()), clock.instant());
 		if (request.ownerType() != null) {
 			user.assignOwnerType(request.ownerType(), request.companyName(), request.edrpou());
 		}

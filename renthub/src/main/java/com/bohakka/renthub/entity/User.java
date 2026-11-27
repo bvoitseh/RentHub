@@ -8,6 +8,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -48,8 +51,14 @@ public class User {
 	@Column(nullable = false, length = 10)
 	private Role role;
 
+	/** Copy of the settlement name, shown on the public profile. */
 	@Column(length = 100)
 	private String city;
+
+	/** FR-1, NFR-5: region + settlement only; null for the admin. Reference data, loaded with the user (D-48). */
+	@ManyToOne(fetch = FetchType.EAGER)
+	@JoinColumn(name = "settlement_id")
+	private Settlement settlement;
 
 	@Column(name = "geo_consent", nullable = false)
 	private boolean geoConsent;
@@ -84,13 +93,14 @@ public class User {
 	@Column(name = "rating_avg", precision = 3, scale = 2)
 	private BigDecimal ratingAvg;
 
-	public User(String name, String email, String phone, String passwordHash, Role role, String city, Instant now) {
+	public User(String name, String email, String phone, String passwordHash, Role role, Settlement settlement,
+			Instant now) {
 		this.name = name.trim();
 		this.email = normalizeEmail(email);
 		this.phone = phone;
 		this.passwordHash = passwordHash;
 		this.role = role;
-		this.city = city;
+		moveTo(settlement);
 		this.createdAt = now;
 		this.ownerType = role == Role.USER ? OwnerType.PRIVATE : null;
 	}
@@ -112,10 +122,15 @@ public class User {
 		this.edrpou = type == OwnerType.COMPANY ? edrpou : null;
 	}
 
-	public void updateProfile(String name, String phone, String city) {
+	public void updateProfile(String name, String phone, Settlement settlement) {
 		this.name = name.trim();
 		this.phone = phone;
-		this.city = city;
+		moveTo(settlement);
+	}
+
+	private void moveTo(Settlement settlement) {
+		this.settlement = settlement;
+		this.city = settlement == null ? null : settlement.getName();
 	}
 
 	public void markEmailVerified() {
