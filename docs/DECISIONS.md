@@ -400,3 +400,23 @@ had been archived. Locks: the user's listings → the user → each booking (D-4
   form takes the city, town or village from the result; the owner confirms or corrects it. Existing rows (all seed
   data in Lviv) are set to «Львів» by the migration, and the dev seed script includes the city.
 
+## D-47 Production: PostgreSQL by configuration, Docker images, Nginx over HTTP for now (2026-11-27)
+
+**Concerns:** NFR-2, NFR-4, NFR-5, CLAUDE.md §3; supersedes D-17 for production. **Decisions (author's):**
+- **Database:** PostgreSQL in production, chosen only by `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`; without them the
+  local default stays the file H2. The PostgreSQL driver and `flyway-database-postgresql` are added. The production
+  compose has **no** PostgreSQL service: the backend reaches the author's existing server through
+  `host.docker.internal` (host-gateway) or, with `docker-compose.prod.pgnet.yml`, an external Docker network named by
+  `PG_NETWORK`. Before the first migration the `public` schema of the existing `renthub` database was checked and
+  found empty, so Flyway creates everything (no baseline). Still no Spring profiles: production differs only by
+  environment variables (`H2_CONSOLE_ENABLED=false`, `LOG_LEVEL=INFO`, `SESSION_COOKIE_SECURE`).
+- **Backups:** `infra/backup/backup.sh` runs `pg_dump` inside the existing container (`PG_CONTAINER`, `PG_DB`,
+  `PG_USER`), gzip, 14-day rotation; restores are tested into a separate scratch database, never into `renthub`.
+- **Photos:** SeaweedFS in the production compose with a persistent volume; S3 identities are generated from
+  `S3_ACCESS_KEY` / `S3_SECRET_KEY` at start-up, anonymous users may only read, and Nginx serves the bucket read-only
+  at `/photos/`. Another S3 provider stays selectable through `S3_*` (add its origin to `CSP_IMG_SRC_EXTRA`).
+- **HTTPS:** postponed. Nginx listens on HTTP only, without redirect or HSTS; the session cookie's `Secure` flag is
+  configurable and off by default. The other security headers and the upload limit (photos 5 MB, request 6 MB for
+  multipart overhead) are in place; `renthub.conf.template` and the README mark what to change when HTTPS comes.
+- **Privacy policy (NFR-5):** a static Ukrainian page at `/privacy`, linked from the footer and the registration form.
+
