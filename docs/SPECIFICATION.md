@@ -162,6 +162,7 @@ Ownership rules (enforced in the service layer, not only in the UI): only a list
 | `POST /equipment/{id}/photos`, `DELETE /equipment/{id}/photos/{photoId}` | photo upload / removal | owner (own) |
 | `GET /regions`, `GET /settlements?regionId&q` | regions; settlement suggestions (prefix, ≥ 2 characters, ≤ 20, from our database only) | all |
 | `GET /geocode?settlementId&street` | pin and postal-code suggestion for a listing address | owner |
+| `GET /geocode/reverse?settlementId&lat&lon` | street, house and postal-code suggestion for a moved pin (D-49) | owner |
 | `GET /equipment/{id}/availability?from&to` | availability + occupied ranges | guest |
 | `GET/POST/DELETE /equipment/{id}/blocks` | calendar | owner |
 | `POST /bookings`; `GET /bookings/my`, `/bookings/incoming` | requests, lists | authenticated |
