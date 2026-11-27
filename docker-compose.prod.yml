@@ -5,6 +5,10 @@
 #
 # prod.env (git-ignored) holds every setting and secret; see README, "Deploy". To reach PostgreSQL on a Docker
 # network instead of the host, add -f docker-compose.prod.pgnet.yml (README).
+# Own project name: the local docker-compose.yml in the same directory uses services with the same names, and
+# without it Compose would treat both files as one project (and share containers and volumes).
+name: renthub-prod
+
 services:
   backend:
     build: ./renthub
