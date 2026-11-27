@@ -7,19 +7,19 @@ Requirements live in `SPECIFICATION.md`, engineering rules in `CLAUDE.md`, recor
 
 ```
 renthub/
-├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub
-├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4
+├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub; Dockerfile (JRE, non-root)
+├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4; Dockerfile (Node build → Nginx)
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml   redis · s3 (SeaweedFS) + s3-init (bucket)
-├─ infra/        seaweedfs/ (S3 identities, bucket) · seed/ (demo-data.sql, D-36) · osm/ (regions/settlements export, D-48)
-└─ dev.env              local environment (git-ignored); the keys are listed in the README
+├─ docker-compose.yml       local: redis · s3 + s3-init; *.prod.yml: Nginx · backend · redis · s3, external PostgreSQL (D-47)
+├─ infra/       seaweedfs/ (S3, prod entrypoint) · nginx/ · backup/backup.sh · seed/ (D-36) · osm/ (settlements, D-48)
+└─ dev.env · prod.env   local / production environment (git-ignored); keys listed in the README
 ```
 
 ## 2. Backend
 
 **Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, AWS SDK v2 (S3), Lombok. Embedded H2 in PostgreSQL mode, one configuration
-without Spring profiles (D-17). No backend tests by project policy.
+Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, AWS SDK v2 (S3), Lombok. Embedded H2 (PostgreSQL mode) locally,
+PostgreSQL in production via `DB_URL` (D-47); one configuration without Spring profiles (D-17). No backend tests.
 
 **Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
 New features add classes to these packages; a new package is created only for a genuinely new kind of class.
@@ -115,12 +115,12 @@ let Spring Data drop expired tokens from the indexes. Consumption is find-then-d
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
 (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 
-**Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub`, H2 console
-`/h2-console`, SMTP relay (Gmail defaults); secrets and external services only via `${ENV}`
+**Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub` and the H2 console
+unless `DB_URL` / `H2_CONSOLE_ENABLED=false` say otherwise (D-47), SMTP relay; secrets and external services only via `${ENV}`
 variables or the root `dev.env` (git-ignored, imported by `spring.config.import`; keys listed in the README).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
-runs on H2 in PostgreSQL mode (and would on PostgreSQL); Hibernate only validates (`ddl-auto=validate`). Timestamps are
+runs on H2 in PostgreSQL mode and on PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
 `TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.

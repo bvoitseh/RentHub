@@ -43,6 +43,7 @@ export const router = createBrowserRouter([
         lazy: { Component: async () => (await import('@/pages/ResetPasswordPage')).ResetPasswordPage },
       },
       { path: 'verify-email', lazy: { Component: async () => (await import('@/pages/VerifyEmailPage')).VerifyEmailPage } },
+      { path: 'privacy', lazy: { Component: async () => (await import('@/pages/PrivacyPage')).PrivacyPage } },
       { path: 'catalog', lazy: { Component: async () => (await import('@/pages/CatalogPage')).CatalogPage } },
       { path: 'equipment/:id', lazy: { Component: async () => (await import('@/pages/EquipmentPage')).EquipmentPage } },
       { path: 'users/:id', lazy: { Component: async () => (await import('@/pages/PublicProfilePage')).PublicProfilePage } },
