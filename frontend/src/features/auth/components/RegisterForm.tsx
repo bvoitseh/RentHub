@@ -1,6 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Controller, useForm, useWatch } from 'react-hook-form'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { applyServerErrors } from '@/api/formErrors'
 import { problemMessage } from '@/api/problem'
 import { Alert } from '@/components/ui/Alert'
@@ -61,7 +61,13 @@ export function RegisterForm() {
       {field('password', t.fields.password, { type: 'password', autoComplete: 'new-password' }, t.register.passwordHint)}
       {field('passwordConfirm', t.fields.passwordConfirm, { type: 'password', autoComplete: 'new-password' })}
       <OwnerTypeFields register={form.register} errors={errors} ownerType={ownerType} idPrefix="reg" />
-      <Button type="submit" loading={register.isPending} className="mt-2">
+      <p className="text-xs text-slate-500">
+        {t.register.privacyNote}{' '}
+        <Link to="/privacy" className="text-brand-700 hover:underline">
+          {uk.privacy.link}
+        </Link>
+      </p>
+      <Button type="submit" loading={register.isPending}>
         {t.register.submit}
       </Button>
     </form>
