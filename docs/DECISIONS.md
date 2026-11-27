@@ -507,3 +507,20 @@ expects the address to follow the pin. **Decision:**
   ''`) are picked up by wrapping that instance's `value` setter; react-hook-form's focus-on-error goes to the visible
   trigger. Choosing the current option fires nothing, like a native select. No new dependency.
 
+
+## D-52 Several photos at once and one video per listing (2026-11-27)
+
+- **Concerns:** FR-4, FR-4a, FR-6.
+- **Author's decision:** photos can be chosen or dropped several at a time; the limit is raised from 5 to 10 per
+  listing. A listing may have one video, MP4 or WebM, up to 50 MB. At least one photo is still required to publish,
+  and the cover is always the first photo (catalogue cards and recommendations are unchanged).
+- **Design:** the photo endpoint still takes one file per request; the frontend uploads the selected files one after
+  another and lists the refused ones with the reason, so one bad file does not stop the rest. The video is two columns
+  on `equipment` (`video_key`, `video_content_type`, migration V14), not a table, since there is only one. It is
+  recognised by its leading bytes (`ftyp` box for MP4, EBML header for WebM) and streamed to the object storage
+  instead of being read into memory. A new upload replaces the old video; the old file, a removed video and the video
+  of a deleted listing are removed after the commit by the existing storage-cleanup events. The video upload uses
+  `XMLHttpRequest` on the frontend because `fetch` cannot report upload progress.
+- **Limits:** multipart max file 50 MB and request 55 MB (photos are still checked against 5 MB by the photo service);
+  Nginx `client_max_body_size 55m`, and the CSP gains `media-src` for the storage origin. The photo-position check
+  constraint is widened to 0–9 in V15.

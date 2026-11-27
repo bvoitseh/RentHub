@@ -5,6 +5,7 @@ import com.bohakka.renthub.dto.EquipmentDetailsResponse;
 import com.bohakka.renthub.dto.EquipmentSummaryResponse;
 import com.bohakka.renthub.dto.OwnerBadge;
 import com.bohakka.renthub.dto.PhotoResponse;
+import com.bohakka.renthub.dto.VideoResponse;
 import com.bohakka.renthub.dto.SettlementResponse;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.User;
@@ -42,8 +43,12 @@ public class EquipmentMapper {
 		return new EquipmentDetailsResponse(e.getId(), e.getTitle(), e.getDescription(),
 			CategoryResponse.from(e.getCategory()), e.getCondition(), e.getPricePerDay(), e.getQuantity(),
 			e.getMinDays(), e.getMaxDays(), e.isPickupAvailable(), e.isDeliveryAvailable(), e.getDeliveryNote(),
-			e.getAddress(), e.getCity(), SettlementResponse.from(e.getSettlement()), e.getPostalCode(), e.getLat(), e.getLon(), e.getStatus(), photos(e), owner(e.getOwner()),
+			e.getAddress(), e.getCity(), SettlementResponse.from(e.getSettlement()), e.getPostalCode(), e.getLat(), e.getLon(), e.getStatus(), photos(e), video(e), owner(e.getOwner()),
 			viewerId != null && e.isOwnedBy(viewerId), e.getCreatedAt());
+	}
+
+	public VideoResponse video(Equipment e) {
+		return e.getVideoKey() == null ? null : new VideoResponse(storage.publicUrl(e.getVideoKey()), e.getVideoContentType());
 	}
 
 	public List<PhotoResponse> photos(Equipment e) {

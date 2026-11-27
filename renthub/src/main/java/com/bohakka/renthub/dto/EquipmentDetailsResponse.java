@@ -12,5 +12,5 @@ public record EquipmentDetailsResponse(Long id, String title, String description
 		boolean pickupAvailable, boolean deliveryAvailable, String deliveryNote, String address, String city,
 		SettlementResponse settlement, String postalCode, double lat,
 		double lon,
-		EquipmentStatus status, List<PhotoResponse> photos, OwnerBadge owner, boolean mine, Instant createdAt) {
+		EquipmentStatus status, List<PhotoResponse> photos, VideoResponse video, OwnerBadge owner, boolean mine, Instant createdAt) {
 }

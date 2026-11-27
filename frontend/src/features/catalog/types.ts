@@ -23,6 +23,12 @@ export interface OwnerBadge {
   reviewCount: number
 }
 
+/** FR-4a (D-52): the listing's optional video. */
+export interface Video {
+  url: string
+  contentType: string
+}
+
 export interface Photo {
   id: number
   url: string
@@ -70,6 +76,7 @@ export interface EquipmentDetails {
   lon: number
   status: EquipmentStatus
   photos: Photo[]
+  video: Video | null
   owner: OwnerBadge
   mine: boolean
   createdAt: string

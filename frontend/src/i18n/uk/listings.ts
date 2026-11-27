@@ -19,7 +19,7 @@ export const listings = {
   deleteConfirmTitle: 'Видалити оголошення?',
   deleteConfirm: 'Оголошення та його фото буде видалено назавжди.',
   cancel: 'Скасувати',
-  sections: { basics: 'Опис', terms: 'Ціна та умови', location: 'Розташування', photos: 'Фото' },
+  sections: { basics: 'Опис', terms: 'Ціна та умови', location: 'Розташування', photos: 'Фото та відео' },
   fields: {
     title: 'Назва',
     description: 'Опис',
@@ -51,7 +51,6 @@ export const listings = {
     pinRequired: 'Поставте позначку на мапі',
   },
   photos: {
-    hint: 'JPEG, PNG або WebP до 5 МБ, від 1 до 5 фото. Перше фото — обкладинка.',
     add: 'Додати фото',
     uploading: 'Завантаження…',
     remove: 'Видалити фото',

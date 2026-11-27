@@ -89,13 +89,13 @@ public class ListingServiceImpl implements ListingService {
 		return mapper.details(listing, ownerId);
 	}
 
-	/** FR-5: only a listing without any bookings may be deleted; its photo files go after the commit. */
+	/** FR-5: only a listing without any bookings may be deleted; its photos and video go after the commit. */
 	@Override
 	@Transactional
 	public void delete(Long ownerId, Long equipmentId) {
 		Equipment listing = access.owned(ownerId, equipmentId);
 		assertHasNoBookings(listing);
-		List<String> keys = listing.photoKeys();
+		List<String> keys = listing.storedKeys();
 		blocks.deleteByEquipmentId(listing.getId());
 		equipment.delete(listing);
 		events.publishEvent(new StoredObjectsRemoved(keys));
