@@ -21,6 +21,8 @@ export const uk = {
   },
   nav: {
     main: 'Головна навігація',
+    openMenu: 'Відкрити меню',
+    closeMenu: 'Закрити меню',
     home: 'Головна',
     darkTheme: 'Темна тема',
     darkThemeHint: 'Увімкнути темну тему',
