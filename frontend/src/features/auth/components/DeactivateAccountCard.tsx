@@ -1,7 +1,6 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useNavigate } from 'react-router'
 import { problemMessage } from '@/api/problem'
 import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
@@ -17,8 +16,8 @@ const t = uk.profile.deactivate
 
 /** FR-3c: deactivation with password confirmation and an explicit confirm dialog. */
 export function DeactivateAccountCard() {
-  const navigate = useNavigate()
-  const deactivate = useDeactivateAccount()
+  // A full page load: an in-app navigate loses the race with the profile's route guard, which redirects to /login.
+  const deactivate = useDeactivateAccount(() => window.location.replace('/'))
   const [pending, setPending] = useState<DeactivateInput | null>(null)
   const form = useForm<DeactivateInput>({ resolver: zodResolver(deactivateSchema), defaultValues: { password: '' } })
   const { errors } = form.formState
@@ -27,7 +26,6 @@ export function DeactivateAccountCard() {
     if (!pending) return
     try {
       await deactivate.mutateAsync(pending.password)
-      navigate('/', { replace: true })
     } finally {
       setPending(null)
     }

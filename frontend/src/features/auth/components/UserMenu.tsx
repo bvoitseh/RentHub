@@ -1,4 +1,4 @@
-import { Link, NavLink, useNavigate } from 'react-router'
+import { Link, NavLink } from 'react-router'
 import { Button } from '@/components/ui/Button'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
@@ -13,7 +13,6 @@ const linkClass = ({ isActive }: { isActive: boolean }) =>
 
 /** Header area: login/register links for guests, name + profile + logout for users. */
 export function UserMenu() {
-  const navigate = useNavigate()
   const { data: user, isPending } = useCurrentUser()
   const logout = useLogout()
 
@@ -40,7 +39,8 @@ export function UserMenu() {
       <Button
         variant="ghost"
         loading={logout.isPending}
-        onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
+        // A full page load, like after deactivation: an in-app navigate loses the race with a protected page's guard.
+        onClick={() => logout.mutate(undefined, { onSettled: () => window.location.replace('/') })}
       >
         {t.logout}
       </Button>

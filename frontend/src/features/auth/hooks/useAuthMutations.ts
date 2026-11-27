@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { authApi } from '@/features/auth/api/authApi'
-import { currentUserKey } from '@/features/auth/hooks/useCurrentUser'
+import { clearSession, currentUserKey } from '@/features/auth/hooks/useCurrentUser'
 import type { User } from '@/features/auth/types'
 
 function useSetCurrentUser() {
@@ -28,9 +28,6 @@ export function useLogout() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: authApi.logout,
-    onSettled: () => {
-      queryClient.clear()
-      queryClient.setQueryData(currentUserKey, null)
-    },
+    onSettled: () => clearSession(queryClient),
   })
 }
