@@ -561,3 +561,14 @@ expects the address to follow the pin. **Decision:**
   Keys whose defaults differ inside the production containers (`S3_ENDPOINT`, `REDIS_HOST`) stay commented so the
   compose defaults apply there. The local file keeps the former production test values in a commented "Production"
   block. No `.env.example` is committed: the README lists every key.
+
+## D-56 Street search results far from the chosen settlement are rejected (2026-11-28)
+
+- **Concerns:** FR-4, NFR-13; refines D-48.
+- **Problem (UI test TC-30):** with «м. Львів» selected, Nominatim's structured search answered «вул. Шевченка, 10»
+  with a point in Перемишляни, about 40 km away, and the form reported «Адресу знайдено».
+- **Decision:** a street result whose point is farther than `app.geocoding.max-distance-km` (`GEOCODE_MAX_DISTANCE_KM`,
+  default 25 km) from the selected settlement's own coordinates counts as "not found": the pin goes to the settlement
+  centre with the existing «street not found» message, and the owner moves it by hand. One distance for every
+  settlement (KISS): 25 km covers the largest city (Kyiv) from its centre; smaller wrong matches nearer than that
+  are not caught. The check runs after the Redis cache, so wrong answers cached earlier are rejected too.

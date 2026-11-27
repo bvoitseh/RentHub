@@ -132,7 +132,8 @@ publishes reviews whose window has ended.
 **Integrations** (one small application-owned interface each, configured only through `${ENV}`):
 e-mail via `MailGateway` (SMTP, `SMTP_*`); photos via `ObjectStorage` (`S3ObjectStorage`, AWS SDK v2 against any
 S3-compatible service; SeaweedFS locally, `S3_*`, public-read bucket); geocoding via `Geocoder` (`NominatimGeocoder`:
-structured street + settlement + region search for listing pins and postal codes, and reverse lookup of the street
+structured street + settlement + region search for listing pins and postal codes (results > 25 km from the
+settlement are ignored, D-56), and reverse lookup of the street
 under a moved pin (`GET /geocode/reverse`, D-49), identifying User-Agent, ≤ 1 request/s shared, cached in Redis; regions and settlements come from our own tables, never from Nominatim, D-48).
 
 ## 3. Frontend

@@ -121,6 +121,8 @@ app:
     url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
     user-agent: ${NOMINATIM_USER_AGENT:RentHub/0.1}
     country-codes: ua
+    # D-56: a street result farther than this from the chosen settlement's centre is treated as "not found".
+    max-distance-km: ${GEOCODE_MAX_DISTANCE_KM:25}
   # FR-10...FR-15b: booking rules and the scheduler jobs (cron fields: second minute hour day month weekday).
   booking:
     min-lead-days: ${BOOKING_MIN_LEAD_DAYS:1}
