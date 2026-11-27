@@ -56,8 +56,9 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   })
 
   if (!response.ok) throw new ProblemError(await parseProblem(response))
-  if (response.status === 204) return undefined as T
-  return (await response.json()) as T
+  // 202/204 answers carry no body; parse JSON only when there is one.
+  const text = await response.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 export const api = {
