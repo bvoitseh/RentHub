@@ -31,7 +31,7 @@ public class AdminAccountConfig {
 				return;
 			}
 			if (!StringUtils.hasText(properties.email()) || !StringUtils.hasText(properties.password())) {
-				log.warn("No administrator exists and ADMIN_EMAIL / ADMIN_PASSWORD are not set in dev.env; "
+				log.warn("No administrator exists and ADMIN_EMAIL / ADMIN_PASSWORD are not set in .env; "
 					+ "no administrator was created");
 				return;
 			}

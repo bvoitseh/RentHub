@@ -12,7 +12,7 @@ renthub/
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
 ├─ docker-compose.yml       local: redis · s3 + s3-init; *.prod.yml: Nginx · backend · redis · s3, external PostgreSQL (D-47)
 ├─ infra/       seaweedfs/ (S3, prod entrypoint) · nginx/ · backup/backup.sh · seed/ (D-36) · osm/ (settlements, D-48)
-└─ dev.env · prod.env   local / production environment (git-ignored); keys listed in the README
+└─ .env                 the single environment file per machine (git-ignored, D-55); keys listed in the README
 ```
 
 ## 2. Backend
@@ -117,7 +117,7 @@ let Spring Data drop expired tokens from the indexes. Consumption is find-then-d
 
 **Configuration:** a single `application.yml`, no Spring profiles (D-17): PostgreSQL from docker-compose
 unless `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` say otherwise (D-47, D-54), SMTP relay; secrets and external services only via `${ENV}`
-variables or the root `dev.env` (git-ignored, imported by `spring.config.import`; keys listed in the README).
+variables or the root `.env` (git-ignored, imported by `spring.config.import` and read by Compose; D-55).
 
 **Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written for PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
 `TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.

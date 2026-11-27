@@ -44,8 +44,9 @@ Useful dev URLs:
 | `localhost:5433` | PostgreSQL (database `renthub`, user `renthub`, password `renthub`; any SQL client or `docker exec -it renthub-postgres psql -U renthub`) |
 
 The application needs no environment variables except SMTP credentials for e-mail. Local configuration lives in
-`dev.env` at the repository root (git-ignored, the single place for secrets). Spring Boot imports it itself
-(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; the syntax is Java `.properties`
+`.env` at the repository root (git-ignored, the single configuration file and the only place for secrets; D-55).
+Spring Boot imports it itself
+(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; Docker Compose reads the same file automatically; the syntax is Java `.properties`
 (`KEY=value`, no inline comments; comment a key out to keep the default), and real environment variables take
 precedence. Keys it may contain:
 
@@ -65,12 +66,12 @@ precedence. Keys it may contain:
 | booking (FR-10, FR-15b) | `BOOKING_MIN_LEAD_DAYS` (default 1 = from tomorrow), `BOOKING_HORIZON_DAYS` (365), `BOOKING_REQUEST_TTL` (48h) |
 | map tiles (frontend) | `VITE_MAP_TILE_URL` in `frontend/.env.local`, optional; OpenStreetMap tiles by default |
 
-Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
+Verification and password-reset e-mails go out through the SMTP relay configured in `.env` (`SMTP_*`; Gmail
 defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
 still succeeds.
 
 The only preset account is the administrator: it is created at start-up from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
-`dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
+`.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
 later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
 user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
 
@@ -119,7 +120,7 @@ cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file)
 ## Configuration
 
 One configuration for everything, no Spring profiles (`docs/DECISIONS.md` D-17): locally the docker-compose
-PostgreSQL (D-54), outgoing e-mail through the `SMTP_*` relay from `dev.env`. Production is the same application with
+PostgreSQL (D-54), outgoing e-mail through the `SMTP_*` relay from `.env`. Production is the same application with
 other environment variables (its own PostgreSQL via `DB_*`, INFO logs; D-47), see "Deploy" below.
 
 ## Deploy (production)
@@ -137,7 +138,8 @@ PostgreSQL is **not** in the compose file: the backend connects to an existing P
 created). On the first start Flyway creates all tables, so the database's `public` schema must be empty then.
 
 1. Install Docker Engine with the Compose plugin; clone the repository (e.g. to `/opt/renthub`).
-2. Create `prod.env` in the repository root (git-ignored, never commit it):
+2. Create `.env` in the repository root (git-ignored, never commit it; the server's own copy, with production values —
+   the local `.env` lists them in its "Production" block):
 
    ```properties
    DB_URL=jdbc:postgresql://host.docker.internal:5432/renthub
@@ -167,14 +169,14 @@ created). On the first start Flyway creates all tables, so the database's `publi
    - **PostgreSQL container on a Docker network:** set `PG_NETWORK=<network name>` and
      `DB_URL=jdbc:postgresql://<postgres container name>:5432/<db>`, then add the override file to every command:
      `-f docker-compose.prod.yml -f docker-compose.prod.pgnet.yml`.
-4. Start: `docker compose --env-file prod.env -f docker-compose.prod.yml up -d --build`, then check
+4. Start: `docker compose -f docker-compose.prod.yml up -d --build` (Compose reads `.env` itself), then check
    `docker compose -f docker-compose.prod.yml ps` (backend `healthy`) and open `http://your-domain`.
 5. Update: `git pull`, then the same `up -d --build`; Flyway applies new migrations on start.
 
 ### Backups and restore (NFR-2)
 
 `infra/backup/backup.sh` writes `BACKUP_DIR/<db>_<date>.sql.gz` with `pg_dump` run inside the PostgreSQL container
-(settings `PG_CONTAINER`, `PG_DB`, `PG_USER` from `prod.env`) and deletes dumps older than `RETENTION_DAYS` days. Daily
+(settings `PG_CONTAINER`, `PG_DB`, `PG_USER` from `.env`) and deletes dumps older than `RETENTION_DAYS` days. Daily
 at 03:30 via cron:
 
 ```cron
