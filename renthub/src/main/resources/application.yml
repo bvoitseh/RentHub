@@ -45,8 +45,9 @@ spring:
     locale-resolver: fixed
   servlet:
     multipart:
-      max-file-size: 5MB
-      max-request-size: 30MB
+      # Videos up to 50 MB (D-52); photos are still limited to 5 MB by the photo service.
+      max-file-size: 50MB
+      max-request-size: 55MB
   mail:
     host: ${SMTP_HOST:smtp.gmail.com}
     port: ${SMTP_PORT:587}

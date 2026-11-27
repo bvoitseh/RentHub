@@ -47,8 +47,8 @@ through the aggregate (1-5, contiguous positions, the last one cannot be removed
 blocked. `CatalogServiceImpl` composes `EquipmentSpecifications` (visible = ACTIVE + owner active + ≥ 1 photo; text,
 category, price, rental length vs min/max days, units, radius, handover, owner type) and sorts by price, newest or
 distance (portable SQL expression); cover photos of a page are loaded in one query. Photo files are sniffed by magic
-bytes (JPEG/PNG/WebP, ≤ 5 MB), stored under `equipment/{id}/{uuid}.{ext}`, and removed by `StoredObjectCleanupListener`
-after the commit (or after a rollback for a fresh upload). With rental dates the catalogue keeps only listings with
+bytes (JPEG/PNG/WebP ≤ 5 MB, 1–10 per listing; one optional MP4/WebM video ≤ 50 MB streamed by `VideoServiceImpl`,
+D-52) under `equipment/{id}/{uuid}.{ext}`, removed by `StoredObjectCleanupListener` after commit (or a fresh upload's rollback). With rental dates the catalogue keeps only listings with
 the units free on every day (`hasFreeUnits`: no overlapping block, and the busiest day — the period's first day or a
 booking's first day inside it — has room) and the price range and card price refer to the total cost. FR-5 checks use
 the bookings. Profile counters: ratings (FR-19) and complaints without rejected ones (FR-21).

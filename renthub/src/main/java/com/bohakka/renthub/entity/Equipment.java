@@ -34,7 +34,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Equipment {
 
-	public static final int MAX_PHOTOS = 5;
+	/** FR-4a (D-52): 1-10 photos per listing. */
+	public static final int MAX_PHOTOS = 10;
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -110,6 +111,13 @@ public class Equipment {
 
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
+
+	/** FR-4a (D-52): optional video, one per listing; key in the object storage. */
+	@Column(name = "video_key", length = 200, unique = true)
+	private String videoKey;
+
+	@Column(name = "video_content_type", length = 20)
+	private String videoContentType;
 
 	@OneToMany(mappedBy = "equipment", cascade = CascadeType.ALL, orphanRemoval = true)
 	@OrderBy("position ASC")
@@ -213,7 +221,7 @@ public class Equipment {
 		return photo;
 	}
 
-	/** Removes the photo and returns its storage key; a listing keeps at least one photo (FR-4: 1-5 photos). */
+	/** Removes the photo and returns its storage key; a listing keeps at least one photo (FR-4a: 1-10 photos). */
 	public String removePhoto(Long photoId, Instant now) {
 		EquipmentPhoto photo = photos.stream().filter(p -> p.getId().equals(photoId)).findFirst()
 			.orElseThrow(() -> new NotFoundException("photo.not_found", "photo.not_found"));
@@ -228,7 +236,36 @@ public class Equipment {
 		return photo.getStorageKey();
 	}
 
-	public List<String> photoKeys() {
-		return photos.stream().map(EquipmentPhoto::getStorageKey).toList();
+	/**
+	 * FR-4a (D-52): sets the listing's video; a new upload replaces the previous one, whose storage key is returned
+	 * (or null) so the old file can be removed after the commit.
+	 */
+	public String replaceVideo(String storageKey, String contentType, Instant now) {
+		String previous = videoKey;
+		this.videoKey = storageKey;
+		this.videoContentType = contentType;
+		this.updatedAt = now;
+		return previous;
+	}
+
+	/** Removes the video and returns its storage key. */
+	public String removeVideo(Instant now) {
+		if (videoKey == null) {
+			throw new NotFoundException("video.not_found", "video.not_found");
+		}
+		String key = videoKey;
+		this.videoKey = null;
+		this.videoContentType = null;
+		this.updatedAt = now;
+		return key;
+	}
+
+	/** Every stored file of the listing (photos and the video), removed when the listing is deleted. */
+	public List<String> storedKeys() {
+		List<String> keys = new ArrayList<>(photos.stream().map(EquipmentPhoto::getStorageKey).toList());
+		if (videoKey != null) {
+			keys.add(videoKey);
+		}
+		return keys;
 	}
 }

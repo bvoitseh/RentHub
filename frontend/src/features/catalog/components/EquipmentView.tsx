@@ -25,7 +25,7 @@ export function EquipmentView({ item }: { item: EquipmentDetails }) {
         </Alert>
       )}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_2fr]">
-        <EquipmentGallery photos={item.photos} title={item.title} />
+        <EquipmentGallery photos={item.photos} video={item.video} title={item.title} />
         <div className="flex flex-col gap-4">
           <h1 className="text-2xl font-bold text-slate-900">{item.title}</h1>
           <p className="text-2xl font-bold text-slate-900">

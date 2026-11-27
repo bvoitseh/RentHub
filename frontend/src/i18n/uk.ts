@@ -6,6 +6,7 @@ import { booking } from '@/i18n/uk/booking'
 import { catalog } from '@/i18n/uk/catalog'
 import { complaints } from '@/i18n/uk/complaints'
 import { listings } from '@/i18n/uk/listings'
+import { media } from '@/i18n/uk/media'
 import { privacy } from '@/i18n/uk/privacy'
 import { profile } from '@/i18n/uk/profile'
 import { recommendations } from '@/i18n/uk/recommendations'
@@ -57,6 +58,7 @@ export const uk = {
   catalog,
   complaints,
   listings,
+  media,
   privacy,
   profile,
   recommendations,
