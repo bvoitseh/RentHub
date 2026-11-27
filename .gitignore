@@ -7,12 +7,10 @@
 renthub/.gradle/
 renthub/build/
 renthub/out/
+# Leftover local database files from the former embedded H2 (D-54)
+renthub/data/
 renthub/bin/
 renthub/HELP.md
-renthub/data/
-*.db
-*.mv.db
-*.trace.db
 
 # Frontend
 frontend/node_modules/

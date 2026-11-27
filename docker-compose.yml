@@ -1,7 +1,25 @@
-# Local infrastructure: Redis (rate limits, e-mail link tokens, geocoding cache; required by the backend) and
-# SeaweedFS as S3-compatible object storage (listing photos). The database is embedded H2; e-mail goes to a real SMTP relay.
-# Usage: docker compose up -d redis s3 s3-init
+# Local infrastructure: PostgreSQL (the database), Redis (rate limits, e-mail link tokens, geocoding cache) and
+# SeaweedFS as S3-compatible object storage (listing photos); all required by the backend. E-mail goes to a real SMTP relay.
+# Usage: docker compose up -d postgres redis s3 s3-init
 services:
+  # PostgreSQL (PostgreSQL License), the only database (D-54). Local development credentials only.
+  postgres:
+    image: postgres:18-alpine
+    container_name: renthub-postgres
+    environment:
+      POSTGRES_DB: renthub
+      POSTGRES_USER: renthub
+      POSTGRES_PASSWORD: renthub
+    ports:
+      - "5433:5432"   # host port 5433, so a PostgreSQL already installed on 5432 does not clash
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U renthub -d renthub"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   redis:
     image: redis:8.2.11-alpine
     container_name: renthub-redis
@@ -42,5 +60,6 @@ services:
     entrypoint: ["/bin/sh", "/create-bucket.sh"]
 
 volumes:
+  postgres-data:
   redis-data:
   s3-data:

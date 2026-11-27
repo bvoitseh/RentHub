@@ -36,7 +36,6 @@ import org.springframework.security.web.session.SessionInformationExpiredStrateg
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-	private static final String[] DEV_TOOLS = {"/h2-console/**"};
 	/** FR-6, FR-7, FR-19: the catalogue, cards, categories and public profiles are open to guests. */
 	private static final String[] PUBLIC_GET = {"/api/v1/categories", "/api/v1/equipment", "/api/v1/equipment/{id:\\d+}",
 		"/api/v1/equipment/{id:\\d+}/availability", "/api/v1/users/{id:\\d+}",
@@ -77,12 +76,8 @@ public class SecurityConfig {
 		SessionInformationExpiredStrategy expired = event -> problemHandler.commence(event.getRequest(),
 			event.getResponse(), new SessionAuthenticationException("Session expired"));
 		http
-			.csrf(csrf -> {
-				csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-					.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler());
-				csrf.ignoringRequestMatchers("/h2-console/**");
-			})
-			.headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()))
+			.csrf(csrf -> csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+				.csrfTokenRequestHandler(new SpaCsrfTokenRequestHandler()))
 			.securityContext(context -> context.securityContextRepository(contextRepository))
 			.sessionManagement(session -> {
 				session.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
@@ -101,7 +96,6 @@ public class SecurityConfig {
 				auth.requestMatchers("/actuator/health").permitAll();
 				auth.requestMatchers(HttpMethod.POST, PUBLIC_AUTH_POST).permitAll();
 				auth.requestMatchers(HttpMethod.GET, PUBLIC_GET).permitAll();
-				auth.requestMatchers(DEV_TOOLS).permitAll();
 				auth.anyRequest().authenticated();
 			});
 		return http.build();
