@@ -46,6 +46,8 @@ export const uk = {
     errorGeneric: 'Щось пішло не так. Спробуйте пізніше.',
     errorNetwork: 'Немає з’єднання із сервером. Перевірте мережу та спробуйте ще раз.',
     or: 'або',
+    search: 'Пошук…',
+    nothingFound: 'Нічого не знайдено',
   },
   address,
   admin,

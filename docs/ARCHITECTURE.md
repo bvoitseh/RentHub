@@ -149,7 +149,7 @@ src/
 ├─ api/        client.ts (fetch wrapper: JSON, same-origin cookies, CSRF header, ProblemError) · problem.ts · csrf.ts
 │              · formErrors.ts (backend field violations → react-hook-form) · health.ts
 ├─ components/layout/  AppLayout · Header · Footer · BackendStatus
-├─ components/ui/      Button · Input · Select · Checkbox · FormField · Dialog · Spinner/LoadingState · Alert · ErrorState · EmptyState
+├─ components/ui/      Button · Input · Select + SelectMenu (searchable, D-51) · Checkbox · FormField · Dialog · Alert · States
 ├─ components/map/     leaflet.ts (tiles, icon, helpers) · useLeafletMap (callback-ref map lifecycle) · MapView · PinPicker
 ├─ pages/      Home · NotFound · Login · Register · ForgotPassword · ResetPassword · VerifyEmail · Profile · Catalog ·
 │              Equipment · PublicProfile · MyListings · ListingCreate · ListingEdit · MyBookings · IncomingBookings

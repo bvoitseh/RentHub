@@ -491,3 +491,19 @@ expects the address to follow the pin. **Decision:**
   Known light-theme weaknesses left as they were: white on the teal button 3.7:1, amber stars and the amber owner
   rating on white 2.1–3.2:1.
 
+## D-51 Custom searchable dropdowns (2026-11-27)
+
+**Concerns:** NFR-6 (UI), author's request. **Decisions:**
+- Every dropdown is the custom `Select` (12 places: region, categories, condition, account type, sort, radius, status
+  filters, months, target category) with a search field in **every** list (author's choice): case- and
+  apostrophe-insensitive "contains", «Нічого не знайдено» when empty, the selected option scrolled into view.
+- Keyboard: Enter / Space / arrows open, typing a letter on the closed trigger opens with that letter searched,
+  arrows / Home / End move, Enter picks, Escape closes (without closing a surrounding `<dialog>`) and returns focus,
+  Tab or a click outside closes. Opens upward when there is no room below. Same look as inputs, light and dark.
+- **Compatibility without touching call sites:** `Select` keeps the native props and renders a visually hidden native
+  `<select>` that owns the value, `name`, `ref`, `onChange`, `defaultValue`. Picking sets it and dispatches bubbling
+  `input`/`change` events, so controlled usages, react-hook-form `register` and the uncontrolled catalogue form
+  (FormData, auto-apply, reset) behave exactly as before. Programmatic changes (`setValue`, `reset`, `select.value =
+  ''`) are picked up by wrapping that instance's `value` setter; react-hook-form's focus-on-error goes to the visible
+  trigger. Choosing the current option fires nothing, like a native select. No new dependency.
+
