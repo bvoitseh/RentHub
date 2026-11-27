@@ -16,7 +16,7 @@ export function FormField({ label, htmlFor, error, hint, children }: FormFieldPr
         {label}
       </label>
       {children}
-      <p className={`min-h-4 text-xs ${error ? 'text-red-600' : 'text-slate-500'}`} aria-live="polite">
+      <p className={`min-h-4 text-xs ${error ? 'text-red-600 dark:text-red-700' : 'text-slate-500'}`} aria-live="polite">
         {error ?? hint}
       </p>
     </div>

@@ -11,7 +11,7 @@ const t = uk.admin
 
 function UserRow({ user: u }: { user: AdminUser }) {
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-surface p-3 text-sm sm:flex-row sm:items-center">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex flex-wrap items-center gap-2">
           <Link to={`/users/${u.id}`} className="font-semibold text-slate-900 hover:text-brand-700">

@@ -14,7 +14,7 @@ const statusClass = {
 /** One listing on the owner's dashboard: cover, title, price, status and actions. */
 export function MyListingRow({ item }: { item: EquipmentSummary }) {
   return (
-    <li className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
+    <li className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-surface p-3 sm:flex-row sm:items-center">
       <div className="w-full shrink-0 overflow-hidden rounded-md sm:w-32">
         <EquipmentCover url={item.coverUrl} alt={item.title} />
       </div>

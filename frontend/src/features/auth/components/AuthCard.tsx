@@ -10,7 +10,7 @@ export interface AuthCardProps {
 export function AuthCard({ title, children, footer }: AuthCardProps) {
   return (
     <div className="mx-auto w-full max-w-md">
-      <div className="rounded-lg border border-slate-200 bg-white p-6 shadow-xs sm:p-8">
+      <div className="rounded-lg border border-slate-200 bg-surface p-6 shadow-xs sm:p-8">
         <h1 className="mb-6 text-2xl font-bold text-slate-900">{title}</h1>
         {children}
       </div>

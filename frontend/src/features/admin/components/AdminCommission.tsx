@@ -27,7 +27,7 @@ export function AdminCommission() {
 
   return (
     <div className="flex max-w-xl flex-col gap-4">
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
+      <section className="rounded-lg border border-slate-200 bg-surface p-4">
         <p className="text-sm text-slate-500">{t.current}</p>
         <p className="text-3xl font-bold text-slate-900">{formatNumber(data.rate)} %</p>
         <p className="text-sm text-slate-600">{t.since(formatDateTime(data.updatedAt))}</p>

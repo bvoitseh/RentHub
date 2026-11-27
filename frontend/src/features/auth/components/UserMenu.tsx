@@ -25,7 +25,7 @@ export function UserMenu() {
         <NavLink to="/login" className={linkClass}>
           {t.login}
         </NavLink>
-        <Link to="/register" className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
+        <Link to="/register" className="rounded-md bg-brand-600 px-3 py-2 text-sm font-medium text-on-accent hover:bg-brand-700">
           {t.register}
         </Link>
       </div>

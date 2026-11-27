@@ -12,7 +12,7 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
 }
 
 const base =
-  'block w-full rounded-md border bg-white px-3 py-2 text-sm text-slate-900 shadow-xs ' +
+  'block w-full rounded-md border bg-surface px-3 py-2 text-sm text-slate-900 shadow-xs ' +
   'focus:outline-2 focus:outline-offset-0 disabled:bg-slate-100 disabled:text-slate-500'
 
 export function Select({ options, invalid = false, placeholder, className = '', ...rest }: SelectProps) {

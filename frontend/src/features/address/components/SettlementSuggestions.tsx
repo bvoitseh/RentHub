@@ -16,7 +16,7 @@ export function SettlementSuggestions({ id, items, loading, active, onPick }: Se
     <ul
       id={id}
       role="listbox"
-      className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-slate-200 bg-white py-1 text-sm shadow-lg"
+      className="absolute z-30 mt-1 max-h-72 w-full overflow-auto rounded-md border border-slate-200 bg-surface py-1 text-sm shadow-lg"
     >
       {items.length === 0 && <li className="px-3 py-2 text-slate-500">{loading ? t.searching : t.nothingFound}</li>}
       {items.map((s, index) => (

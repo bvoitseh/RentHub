@@ -9,7 +9,7 @@ import { uk } from '@/i18n/uk'
 
 const t = uk.listings.fields
 const textarea =
-  'block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-xs focus:outline-2 focus:outline-brand-600'
+  'block w-full rounded-md border border-slate-300 bg-surface px-3 py-2 text-sm text-slate-900 shadow-xs focus:outline-2 focus:outline-brand-600'
 
 /** Title, description, category, condition (FR-4). */
 export function ListingBasicsFields({ form }: { form: UseFormReturn<ListingInput> }) {

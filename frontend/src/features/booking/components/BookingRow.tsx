@@ -23,7 +23,7 @@ export interface BookingRowProps {
 export function BookingRow({ booking: b, party, actions }: BookingRowProps) {
   const other = party === 'owner' ? b.owner : b.renter
   return (
-    <li className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-white p-3 sm:flex-row">
+    <li className="flex flex-col gap-3 rounded-lg border border-slate-200 bg-surface p-3 sm:flex-row">
       <Link to={`/equipment/${b.equipment.id}`} className="w-full shrink-0 overflow-hidden rounded-md sm:w-32">
         <EquipmentCover url={b.equipment.coverUrl} alt={b.equipment.title} />
       </Link>

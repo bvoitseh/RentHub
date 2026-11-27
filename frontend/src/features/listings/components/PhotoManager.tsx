@@ -30,14 +30,14 @@ export function PhotoManager({ listingId, photos }: PhotoManagerProps) {
           <li key={photo.id} className="relative overflow-hidden rounded-md border border-slate-200">
             <img src={photo.url} alt="" className="aspect-square w-full object-cover" />
             {photo.position === 0 && (
-              <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-xs text-white">{t.cover}</span>
+              <span className="absolute left-1 top-1 rounded bg-brand-600 px-1.5 py-0.5 text-xs text-on-accent">{t.cover}</span>
             )}
             <button
               type="button"
               onClick={() => remove.mutate(photo.id)}
               disabled={remove.isPending}
               aria-label={t.remove}
-              className="absolute right-1 top-1 rounded-full bg-white/90 px-2 text-sm text-red-700 shadow hover:bg-white"
+              className="absolute right-1 top-1 rounded-full bg-surface/90 px-2 text-sm text-red-700 shadow hover:bg-surface"
             >
               ×
             </button>

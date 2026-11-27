@@ -13,7 +13,7 @@ const t = uk.admin
 export function ComplaintRow({ complaint: c }: { complaint: Complaint }) {
   const decide = useDecideComplaint()
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm sm:flex-row">
+    <li className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-surface p-3 text-sm sm:flex-row">
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <p className="flex flex-wrap items-center gap-2 text-slate-500">
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">

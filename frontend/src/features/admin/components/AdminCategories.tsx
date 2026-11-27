@@ -40,7 +40,7 @@ export function AdminCategories() {
         {data.map((c) => (
           <li
             key={c.id}
-            className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3 text-sm sm:flex-row sm:items-center"
+            className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-surface p-3 text-sm sm:flex-row sm:items-center"
           >
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <p className="font-semibold text-slate-900">{c.name}</p>

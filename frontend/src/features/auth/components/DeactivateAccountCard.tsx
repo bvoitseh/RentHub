@@ -34,7 +34,7 @@ export function DeactivateAccountCard() {
   }
 
   return (
-    <section className="rounded-lg border border-red-200 bg-white p-6">
+    <section className="rounded-lg border border-red-200 bg-surface p-6">
       <h2 className="text-lg font-semibold text-red-700">{t.title}</h2>
       <p className="mt-1 text-sm text-slate-600">{t.text}</p>
       {deactivate.isError && (

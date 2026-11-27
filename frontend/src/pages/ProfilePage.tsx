@@ -12,7 +12,7 @@ export function ProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
       <h1 className="text-2xl font-bold text-slate-900">{uk.profile.title}</h1>
-      <section className="rounded-lg border border-slate-200 bg-white p-6">
+      <section className="rounded-lg border border-slate-200 bg-surface p-6">
         <h2 className="mb-4 text-lg font-semibold text-slate-900">{uk.profile.edit.title}</h2>
         <ProfileForm user={user} />
       </section>

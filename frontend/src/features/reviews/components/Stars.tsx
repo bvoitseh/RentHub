@@ -5,7 +5,7 @@ export function Stars({ value }: { value: number }) {
   return (
     <span className="text-amber-500" role="img" aria-label={uk.reviews.stars(value)}>
       {'★'.repeat(value)}
-      <span className="text-slate-300">{'★'.repeat(5 - value)}</span>
+      <span className="text-slate-300 dark:text-slate-400">{'★'.repeat(5 - value)}</span>
     </span>
   )
 }

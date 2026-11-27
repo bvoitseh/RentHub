@@ -18,7 +18,7 @@ export function EquipmentCard({ item, distanceText = t.distance }: EquipmentCard
   return (
     <Link
       to={`/equipment/${item.id}`}
-      className="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600"
+      className="group flex flex-col overflow-hidden rounded-lg border border-slate-200 bg-surface transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-brand-600"
     >
       <EquipmentCover url={item.coverUrl} alt={item.title} />
       <div className="flex flex-1 flex-col gap-2 p-4">
