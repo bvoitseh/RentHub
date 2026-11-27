@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Daily PostgreSQL backup (NFR-2, D-47): pg_dump of the database inside the existing PostgreSQL container,
-# gzip-compressed, keeping RETENTION_DAYS days. Settings come from the environment or from prod.env:
+# gzip-compressed, keeping RETENTION_DAYS days. Settings come from the environment or from the root .env:
 #   PG_CONTAINER (container name), PG_DB (database), PG_USER (role), BACKUP_DIR, RETENTION_DAYS (default 14).
 # Cron example (03:30 every day):
 #   30 3 * * * cd /opt/renthub && ./infra/backup/backup.sh >> /var/log/renthub-backup.log 2>&1
 set -euo pipefail
 
-ENV_FILE="${ENV_FILE:-$(dirname "$0")/../../prod.env}"
+ENV_FILE="${ENV_FILE:-$(dirname "$0")/../../.env}"
 if [[ -f "$ENV_FILE" ]]; then
   # Only the backup settings are read from the file; nothing else is exported.
   while IFS='=' read -r key value; do

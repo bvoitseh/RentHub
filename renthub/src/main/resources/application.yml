@@ -1,14 +1,14 @@
 # Single configuration without Spring profiles (DECISIONS.md D-17, D-47, D-54). PostgreSQL only: locally the
 # docker-compose "postgres" service (defaults below), DEBUG logs. Production sets DB_URL / DB_USERNAME / DB_PASSWORD,
-# LOG_LEVEL=INFO and the other variables from prod.env (README, "Deploy").
+# LOG_LEVEL=INFO and the other variables in the server's .env (README, "Deploy").
 spring:
   application:
     name: renthub
   config:
-    # Local configuration and secrets from the git-ignored repository-root dev.env (Java .properties syntax),
+    # Configuration and secrets from the git-ignored repository-root .env (D-55; Java .properties syntax),
     # whichever of the two is found from the working directory (repository root or renthub/). Real environment
     # variables take precedence over the file.
-    import: optional:file:./dev.env[.properties],optional:file:../dev.env[.properties]
+    import: optional:file:./.env[.properties],optional:file:../.env[.properties]
   datasource:
     # Defaults match the local docker-compose "postgres" service (development only; D-54).
     url: ${DB_URL:jdbc:postgresql://localhost:5433/renthub}

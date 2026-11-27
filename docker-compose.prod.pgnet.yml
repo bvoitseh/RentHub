@@ -1,7 +1,7 @@
 # Optional override (D-47): attach the backend to an existing Docker network on which the PostgreSQL container runs,
-# e.g. DB_URL=jdbc:postgresql://<postgres-container-name>:5432/renthub and PG_NETWORK=<network name> in prod.env.
+# e.g. DB_URL=jdbc:postgresql://<postgres-container-name>:5432/renthub and PG_NETWORK=<network name> in .env.
 #
-#   docker compose --env-file prod.env -f docker-compose.prod.yml -f docker-compose.prod.pgnet.yml up -d --build
+#   docker compose -f docker-compose.prod.yml -f docker-compose.prod.pgnet.yml up -d --build
 services:
   backend:
     networks:
@@ -11,4 +11,4 @@ services:
 networks:
   pg:
     external: true
-    name: ${PG_NETWORK:?set PG_NETWORK in prod.env}
+    name: ${PG_NETWORK:?set PG_NETWORK in .env}
