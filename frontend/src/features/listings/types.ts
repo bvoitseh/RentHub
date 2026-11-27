@@ -21,6 +21,12 @@ export interface ListingPayload {
 }
 
 /** FR-4 (D-48): the pin and suggested postal code; exact=false means the settlement centre (street not found). */
+/** D-49: the street and house under a moved pin (null when unknown) and the suggested postal code. */
+export interface PinAddress {
+  address: string | null
+  postalCode: string | null
+}
+
 export interface ListingLocation {
   lat: number
   lon: number

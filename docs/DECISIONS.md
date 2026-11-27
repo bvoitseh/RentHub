@@ -433,3 +433,20 @@ name, and Nominatim answered «Львів» with a village in Dnipropetrovsk obl
   ones, updates renamed ones and marks rows missing from the export inactive; nothing is deleted, so users and
   listings keep their references (README). Tested on H2 and PostgreSQL 18.
 - `User.settlement` is loaded eagerly (reference data, needed when the account is returned outside a transaction).
+
+## D-49 Moving the listing pin fills the address back in (2026-11-27)
+
+**Concerns:** FR-4, NFR-13. **Context:** FR-4 lets the owner correct the pin by moving it but says nothing about the
+address fields, so after «Вулицю не знайдено» the owner dragged the pin and the street field stayed empty. The author
+expects the address to follow the pin. **Decision:**
+- Placing or dragging the pin calls `GET /api/v1/geocode/reverse?settlementId&lat&lon` (logged-in users), which asks
+  Nominatim `/reverse` (building level, Ukrainian names) and returns «street, house» (`road`, else `pedestrian` or
+  `square`; house number when known) and the postal code chosen by the D-48 rule for the selected settlement.
+- The street field is **overwritten** when a street is found (the pin was moved on purpose); the postal code follows the
+  D-48 rule (an empty field or our own earlier suggestion only). Without a street the field is kept and the owner is
+  asked to type it.
+- The region and settlement are **not** changed, even if the pin is moved into another settlement: matching the
+  reverse answer to our reference data is out of scope (KISS); the owner changes them by hand.
+- Same Nominatim limits as forward search: one shared request per second, answers cached in Redis 30 days (misses 1
+  day) by the point rounded to 5 decimals. Stale answers to earlier drags are ignored on the frontend.
+
