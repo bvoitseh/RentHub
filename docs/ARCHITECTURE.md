@@ -18,8 +18,8 @@ renthub/
 ## 2. Backend
 
 **Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, AWS SDK v2 (S3), Lombok. Embedded H2 (PostgreSQL mode) locally,
-PostgreSQL in production via `DB_URL` (D-47); one configuration without Spring profiles (D-17). No backend tests.
+Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, AWS SDK v2 (S3), Lombok. PostgreSQL only (D-54): docker-compose
+locally, the production server via `DB_URL` (D-47); one configuration without Spring profiles (D-17). No backend tests.
 
 **Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
 New features add classes to these packages; a new package is created only for a genuinely new kind of class.
@@ -96,7 +96,7 @@ timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA 
 Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks
 in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
 (`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`,
-H2 console). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
+public catalogue GETs). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
 (`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
 (so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
 session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
@@ -115,12 +115,11 @@ let Spring Data drop expired tokens from the indexes. Consumption is find-then-d
 `PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
 (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
 
-**Configuration:** a single `application.yml`, no Spring profiles (D-17): file H2 `./data/renthub` and the H2 console
-unless `DB_URL` / `H2_CONSOLE_ENABLED=false` say otherwise (D-47), SMTP relay; secrets and external services only via `${ENV}`
+**Configuration:** a single `application.yml`, no Spring profiles (D-17): PostgreSQL from docker-compose
+unless `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` say otherwise (D-47, D-54), SMTP relay; secrets and external services only via `${ENV}`
 variables or the root `dev.env` (git-ignored, imported by `spring.config.import`; keys listed in the README).
 
-**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written in portable SQL that
-runs on H2 in PostgreSQL mode and on PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
+**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written for PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
 `TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.

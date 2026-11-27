@@ -524,3 +524,17 @@ expects the address to follow the pin. **Decision:**
 - **Limits:** multipart max file 50 MB and request 55 MB (photos are still checked against 5 MB by the photo service);
   Nginx `client_max_body_size 55m`, and the CSP gains `media-src` for the storage origin. The photo-position check
   constraint is widened to 0–9 in V15.
+
+
+## D-54 PostgreSQL only, H2 removed (2026-11-27)
+
+- **Concerns:** NFR-9, CLAUDE.md §3; supersedes the H2 parts of D-17 and D-47.
+- **Author's decision:** all requirements are implemented, so the embedded H2 database is dropped and development
+  uses PostgreSQL too, the same database as production.
+- **Changes:** the `h2` and `spring-boot-h2console` dependencies, the `spring.h2` settings, `H2_CONSOLE_ENABLED`,
+  the `/h2-console` security rules and the `SAMEORIGIN` frame option it needed are removed (frames now fall back to
+  Spring Security's default `DENY`). `docker-compose.yml` gains a `postgres` service (`postgres:18-alpine`,
+  PostgreSQL License) and the datasource defaults point at it (host port 5433 so a locally installed PostgreSQL on 5432 does not clash;
+  `jdbc:postgresql://localhost:5433/renthub`, user and
+  password `renthub`, local development only). Production still sets `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`.
+  Demo data is loaded with `psql` (README). Data in an old local H2 file is not migrated.

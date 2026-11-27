@@ -83,7 +83,7 @@ Not done / known limitations: <or "none">
 ### 2.4 Database migrations and data
 - Flyway files: `V{n}__{snake_case_description}.sql` with sequential `n`; one logical change per migration.
 - **Never edit or delete a migration that has been committed** — fix forward with a new migration.
-- Migrations must work on both H2 (PostgreSQL mode) and PostgreSQL.
+- Migrations target PostgreSQL (the only database, also in development).
 - Demo/seed data (demo accounts for each role, categories, ~150 listings in Lviv) is loaded **only in the `dev` profile** and never by production migrations.
 - **Never run destructive commands without the author's explicit request:** dropping/truncating tables, deleting data, `docker compose down -v`, removing volumes or buckets, `git reset --hard`, deleting branches.
 
@@ -111,7 +111,7 @@ Maintain **`docs/ARCHITECTURE.md`** (create it in the first feature): module/pac
 - **Java 25**, Maven (wrapper `./mvnw`).
 - **Spring Boot** — latest stable GA that officially supports Java 25 (check https://spring.io/projects/spring-boot; if in doubt use 3.5.x or 4.0.x).
 - Spring Web (REST/JSON), Spring Data JPA (Hibernate), Spring Security, Bean Validation, Spring Scheduling, Actuator.
-- **Flyway** migrations; **PostgreSQL** in production, **H2** (PostgreSQL mode) in the `dev` profile. Migrations must run unchanged on both databases. Overbooking protection relies on the equipment row lock + re-check inside one transaction (FR-11), which works the same on H2 and PostgreSQL; use `CHECK` constraints for simple invariants (`units ≥ 1`, `quantity ≥ 1`, `date_to ≥ date_from`, `rating BETWEEN 1 AND 5`).
+- **Flyway** migrations; **PostgreSQL** everywhere (Docker Compose locally, own server in production); no embedded database. Overbooking protection relies on the equipment row lock + re-check inside one transaction (FR-11); use `CHECK` constraints for simple invariants (`units ≥ 1`, `quantity ≥ 1`, `date_to ≥ date_from`, `rating BETWEEN 1 AND 5`).
 - Auth: server-side session (HttpOnly, Secure, SameSite=Lax) + CSRF via `CookieCsrfTokenRepository`; same-origin SPA, Vite proxy `/api` in dev.
 - Spring Mail (SMTP) for e-mails; AWS SDK for Java v2 S3 client (works with any S3-compatible storage, incl. MinIO); Spring `RestClient` for Nominatim; Spring application events + `@Async` for notifications.
 - springdoc-openapi (Swagger UI in `dev` only). Java `record` for DTOs.
@@ -145,7 +145,7 @@ Layering: controller → service → repository. Controllers hold no business lo
 
 **Commands**
 ```bash
-cd backend  && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # H2 + seed data
+cd backend  && ./mvnw spring-boot:run -Dspring-boot.run.profiles=dev   # PostgreSQL from docker compose
 cd backend  && ./mvnw verify                                           # build (no tests)
 cd frontend && npm install && npm run dev                              # Vite, proxy /api -> :8080
 cd frontend && npm run lint && npm run build                         # lint enforces the 150-line limit
