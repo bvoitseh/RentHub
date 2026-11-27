@@ -1,5 +1,5 @@
 -- RentHub demo data: 6 owners and 150 listings around Lviv with placeholder photos (CLAUDE.md 2.4).
--- NOT a Flyway migration: run it by hand, once, against the local H2 database (see README, "Demo data").
+-- NOT a Flyway migration: run it by hand, once, against the local PostgreSQL database (see README, "Demo data").
 -- Safe to re-run: every row is inserted only if it does not exist yet. All demo accounts use the password
 -- Password123 and e-mails at example.com (never receive mail). The photo files are uploaded to the bucket by the
 -- docker-compose job s3-init (infra/seed/photos -> renthub-photos/seed/).

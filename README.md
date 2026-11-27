@@ -12,23 +12,23 @@ recommends equipment nearby and in season, and lets both sides rate each other.
 
 | Part | Technology |
 |---|---|
-| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, embedded H2 (PostgreSQL mode) locally, PostgreSQL in production, Gradle |
+| Backend (`renthub/`) | Java 25, Spring Boot 4.1 (Web MVC, Data JPA, Security, Validation, Mail, Actuator), Flyway, PostgreSQL, Gradle |
 | Frontend (`frontend/`) | React 19, TypeScript, Vite 8, React Router, TanStack Query, React Hook Form + Zod, Tailwind CSS 4, Leaflet |
-| Infrastructure | Docker Compose: Redis (rate limits, e-mail link tokens, geocoding cache), SeaweedFS (S3 photo storage); production adds Nginx and the backend image |
+| Infrastructure | Docker Compose: PostgreSQL, Redis (rate limits, e-mail link tokens, geocoding cache), SeaweedFS (S3 photo storage); production adds Nginx and the backend image |
 
 ## Prerequisites
 
 - JDK 25, Node.js 22+ (24 recommended), npm 10+
-- Docker Desktop (Redis and the S3 storage are required by the backend)
+- Docker Desktop (PostgreSQL, Redis and the S3 storage are required by the backend)
 - An SMTP account for outgoing e-mail (Gmail with an app password works)
 
 ## Run locally
 
 ```bash
-# 1. infrastructure: Redis + S3-compatible photo storage (SeaweedFS; s3-init creates the bucket once)
-docker compose up -d redis s3 s3-init
+# 1. infrastructure: PostgreSQL + Redis + S3-compatible photo storage (SeaweedFS; s3-init creates the bucket once)
+docker compose up -d postgres redis s3 s3-init
 
-# 2. backend — embedded H2 (file ./renthub/data/renthub), Flyway migrations
+# 2. backend — PostgreSQL on localhost:5433 (database/user/password renthub), Flyway migrations
 cd renthub && ./gradlew bootRun               # Windows: gradlew.bat bootRun
 
 # 3. frontend — Vite dev server with /api proxy to :8080
@@ -41,18 +41,19 @@ Useful dev URLs:
 |---|---|
 | http://localhost:5173 | the SPA |
 | http://localhost:8080/actuator/health | health endpoint |
-| http://localhost:8080/h2-console | H2 console (JDBC URL: `jdbc:h2:file:./data/renthub;MODE=PostgreSQL`, user `sa`, empty password) |
+| `localhost:5433` | PostgreSQL (database `renthub`, user `renthub`, password `renthub`; any SQL client or `docker exec -it renthub-postgres psql -U renthub`) |
 
 The application needs no environment variables except SMTP credentials for e-mail. Local configuration lives in
-`dev.env` at the repository root (git-ignored, the single place for secrets). Spring Boot imports it itself
-(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; the syntax is Java `.properties`
+`.env` at the repository root (git-ignored, the single configuration file and the only place for secrets; D-55).
+Spring Boot imports it itself
+(`spring.config.import`), so it works from Gradle, IntelliJ and `java -jar` alike; Docker Compose reads the same file automatically; the syntax is Java `.properties`
 (`KEY=value`, no inline comments; comment a key out to keep the default), and real environment variables take
 precedence. Keys it may contain:
 
 | Group | Keys |
 |---|---|
 | server / app | `SERVER_PORT`, `APP_BASE_URL`, `LOG_LEVEL` (default `DEBUG`), `SESSION_COOKIE_SECURE` (default `false`) |
-| database (D-47) | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` (unset = local file H2), `H2_CONSOLE_ENABLED` (default `true`) |
+| database (D-47) | `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` (defaults: the docker-compose `postgres` service) |
 | Redis | `REDIS_HOST`, `REDIS_PORT` (defaults `localhost`, `6379`) |
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
@@ -65,12 +66,12 @@ precedence. Keys it may contain:
 | booking (FR-10, FR-15b) | `BOOKING_MIN_LEAD_DAYS` (default 1 = from tomorrow), `BOOKING_HORIZON_DAYS` (365), `BOOKING_REQUEST_TTL` (48h) |
 | map tiles (frontend) | `VITE_MAP_TILE_URL` in `frontend/.env.local`, optional; OpenStreetMap tiles by default |
 
-Verification and password-reset e-mails go out through the SMTP relay configured in `dev.env` (`SMTP_*`; Gmail
+Verification and password-reset e-mails go out through the SMTP relay configured in `.env` (`SMTP_*`; Gmail
 defaults, so only `SMTP_USERNAME` and `SMTP_PASSWORD` are required). A failed send is logged and the request
 still succeeds.
 
 The only preset account is the administrator: it is created at start-up from `ADMIN_EMAIL` and `ADMIN_PASSWORD` in
-`dev.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
+`.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
 later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
 user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
 
@@ -78,16 +79,16 @@ user who can both rent and rent out (account type «Приватна особа�
 
 `infra/seed/demo-data.sql` adds 6 verified demo owners (4 private persons, 2 companies) and 150 listings around Lviv
 with placeholder photos. It is not a migration: run it by hand once; running it again changes nothing. The photo files
-are uploaded to the bucket by `s3-init`, so start the infrastructure first (`docker compose up -d redis s3 s3-init`).
+are uploaded to the bucket by `s3-init`, so start the infrastructure first (`docker compose up -d postgres redis s3 s3-init`).
 
-With the backend running, open http://localhost:8080/h2-console, connect (see above) and execute:
+Start the backend once (Flyway creates the tables), then from the repository root:
 
-```sql
-RUNSCRIPT FROM '../infra/seed/demo-data.sql' CHARSET 'UTF-8'
+```bash
+docker cp infra/seed/demo-data.sql renthub-postgres:/tmp/demo-data.sql
+docker exec renthub-postgres psql -U renthub -d renthub -v ON_ERROR_STOP=1 -f /tmp/demo-data.sql
 ```
 
-The path is relative to the backend's working directory (`renthub/`); use an absolute path if your IDE runs it from
-elsewhere. Demo logins: `seed.olena@example.com`, `seed.andrii@example.com`, `seed.marta@example.com`,
+Demo logins: `seed.olena@example.com`, `seed.andrii@example.com`, `seed.marta@example.com`,
 `seed.taras@example.com`, `seed.budprokat@example.com` (company), `seed.fotozona@example.com` (company), all with the
 password `Password123`. The example.com addresses never receive mail.
 
@@ -118,9 +119,9 @@ cd frontend && npm run lint && npm run build  # ESLint (150-line limit per file)
 
 ## Configuration
 
-One configuration for everything, no Spring profiles (`docs/DECISIONS.md` D-17): locally embedded H2 in PostgreSQL
-mode, H2 console, outgoing e-mail through the `SMTP_*` relay from `dev.env`. Production is the same application with
-other environment variables (PostgreSQL, no H2 console, INFO logs; D-47), see "Deploy" below.
+One configuration for everything, no Spring profiles (`docs/DECISIONS.md` D-17): locally the docker-compose
+PostgreSQL (D-54), outgoing e-mail through the `SMTP_*` relay from `.env`. Production is the same application with
+other environment variables (its own PostgreSQL via `DB_*`, INFO logs; D-47), see "Deploy" below.
 
 ## Deploy (production)
 
@@ -137,7 +138,8 @@ PostgreSQL is **not** in the compose file: the backend connects to an existing P
 created). On the first start Flyway creates all tables, so the database's `public` schema must be empty then.
 
 1. Install Docker Engine with the Compose plugin; clone the repository (e.g. to `/opt/renthub`).
-2. Create `prod.env` in the repository root (git-ignored, never commit it):
+2. Create `.env` in the repository root (git-ignored, never commit it; the server's own copy, with production values —
+   the local `.env` lists them in its "Production" block):
 
    ```properties
    DB_URL=jdbc:postgresql://host.docker.internal:5432/renthub
@@ -167,14 +169,14 @@ created). On the first start Flyway creates all tables, so the database's `publi
    - **PostgreSQL container on a Docker network:** set `PG_NETWORK=<network name>` and
      `DB_URL=jdbc:postgresql://<postgres container name>:5432/<db>`, then add the override file to every command:
      `-f docker-compose.prod.yml -f docker-compose.prod.pgnet.yml`.
-4. Start: `docker compose --env-file prod.env -f docker-compose.prod.yml up -d --build`, then check
+4. Start: `docker compose -f docker-compose.prod.yml up -d --build` (Compose reads `.env` itself), then check
    `docker compose -f docker-compose.prod.yml ps` (backend `healthy`) and open `http://your-domain`.
 5. Update: `git pull`, then the same `up -d --build`; Flyway applies new migrations on start.
 
 ### Backups and restore (NFR-2)
 
 `infra/backup/backup.sh` writes `BACKUP_DIR/<db>_<date>.sql.gz` with `pg_dump` run inside the PostgreSQL container
-(settings `PG_CONTAINER`, `PG_DB`, `PG_USER` from `prod.env`) and deletes dumps older than `RETENTION_DAYS` days. Daily
+(settings `PG_CONTAINER`, `PG_DB`, `PG_USER` from `.env`) and deletes dumps older than `RETENTION_DAYS` days. Daily
 at 03:30 via cron:
 
 ```cron

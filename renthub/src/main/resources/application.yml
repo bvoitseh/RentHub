@@ -1,24 +1,19 @@
-# Single configuration without Spring profiles (DECISIONS.md D-17, D-47). Locally: embedded H2 in PostgreSQL mode
-# (file-based), H2 console, DEBUG logs. Production sets DB_URL / DB_USERNAME / DB_PASSWORD (PostgreSQL),
-# H2_CONSOLE_ENABLED=false, LOG_LEVEL=INFO and the other variables from prod.env (README, "Deploy").
+# Single configuration without Spring profiles (DECISIONS.md D-17, D-47, D-54). PostgreSQL only: locally the
+# docker-compose "postgres" service (defaults below), DEBUG logs. Production sets DB_URL / DB_USERNAME / DB_PASSWORD,
+# LOG_LEVEL=INFO and the other variables in the server's .env (README, "Deploy").
 spring:
   application:
     name: renthub
   config:
-    # Local configuration and secrets from the git-ignored repository-root dev.env (Java .properties syntax),
+    # Configuration and secrets from the git-ignored repository-root .env (D-55; Java .properties syntax),
     # whichever of the two is found from the working directory (repository root or renthub/). Real environment
     # variables take precedence over the file.
-    import: optional:file:./dev.env[.properties],optional:file:../dev.env[.properties]
+    import: optional:file:./.env[.properties],optional:file:../.env[.properties]
   datasource:
-    # The driver follows the URL: H2 by default, PostgreSQL when DB_URL is jdbc:postgresql://... (D-47).
-    url: ${DB_URL:jdbc:h2:file:./data/renthub;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DEFAULT_NULL_ORDERING=HIGH;AUTO_SERVER=TRUE}
-    username: ${DB_USERNAME:sa}
-    password: ${DB_PASSWORD:}
-  h2:
-    console:
-      # Development tool only; production must set H2_CONSOLE_ENABLED=false (NFR-4).
-      enabled: ${H2_CONSOLE_ENABLED:true}
-      path: /h2-console
+    # Defaults match the local docker-compose "postgres" service (development only; D-54).
+    url: ${DB_URL:jdbc:postgresql://localhost:5433/renthub}
+    username: ${DB_USERNAME:renthub}
+    password: ${DB_PASSWORD:renthub}
   jpa:
     open-in-view: false
     show-sql: false

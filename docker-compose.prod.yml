@@ -1,9 +1,10 @@
 # Production stack (NFR-2, NFR-4, D-47): Nginx (SPA + reverse proxy), Spring Boot, Redis and SeaweedFS (S3 photos).
 # PostgreSQL is NOT part of this file: the backend uses an existing PostgreSQL server through DB_URL.
 #
-#   docker compose --env-file prod.env -f docker-compose.prod.yml up -d --build
+#   docker compose -f docker-compose.prod.yml up -d --build
 #
-# prod.env (git-ignored) holds every setting and secret; see README, "Deploy". To reach PostgreSQL on a Docker
+# The repository-root .env (git-ignored, read by Compose automatically; D-55) holds every setting and secret; see
+# README, "Deploy". To reach PostgreSQL on a Docker
 # network instead of the host, add -f docker-compose.prod.pgnet.yml (README).
 # Own project name: the local docker-compose.yml in the same directory uses services with the same names, and
 # without it Compose would treat both files as one project (and share containers and volumes).
@@ -15,11 +16,10 @@ services:
     image: renthub-backend
     container_name: renthub-backend
     restart: unless-stopped
-    env_file: prod.env
+    env_file: .env
     environment:
       REDIS_HOST: redis
       S3_ENDPOINT: ${S3_ENDPOINT:-http://s3:8333}
-      H2_CONSOLE_ENABLED: "false"
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     extra_hosts:
       # DB_URL=jdbc:postgresql://host.docker.internal:5432/renthub reaches PostgreSQL published on the host.
@@ -60,7 +60,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Listing photos (FR-4a): SeaweedFS, Apache-2.0. Another S3 provider can be used through S3_* in prod.env.
+  # Listing photos (FR-4a): SeaweedFS, Apache-2.0. Another S3 provider can be used through S3_* in .env.
   s3:
     image: chrislusf/seaweedfs:4.50
     container_name: renthub-prod-s3

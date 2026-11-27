@@ -537,3 +537,27 @@ expects the address to follow the pin. **Decision:**
   it also closes on a link, the backdrop or a route change, and locks page scrolling while open. Before this change
   the header links were hidden on phones with no alternative, so phones now get navigation too. On phones the logo
   shows the icon only, so the header fits on one line.
+
+## D-54 PostgreSQL only, H2 removed (2026-11-27)
+
+- **Concerns:** NFR-9, CLAUDE.md §3; supersedes the H2 parts of D-17 and D-47.
+- **Author's decision:** all requirements are implemented, so the embedded H2 database is dropped and development
+  uses PostgreSQL too, the same database as production.
+- **Changes:** the `h2` and `spring-boot-h2console` dependencies, the `spring.h2` settings, `H2_CONSOLE_ENABLED`,
+  the `/h2-console` security rules and the `SAMEORIGIN` frame option it needed are removed (frames now fall back to
+  Spring Security's default `DENY`). `docker-compose.yml` gains a `postgres` service (`postgres:18-alpine`,
+  PostgreSQL License) and the datasource defaults point at it (host port 5433 so a locally installed PostgreSQL on 5432 does not clash;
+  `jdbc:postgresql://localhost:5433/renthub`, user and
+  password `renthub`, local development only). Production still sets `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`.
+  Demo data is loaded with `psql` (README). Data in an old local H2 file is not migrated.
+
+## D-55 One `.env` file instead of `dev.env` and `prod.env` (2026-11-27)
+
+- **Concerns:** NFR-4 (secrets only via environment variables), CLAUDE.md §3 (engineering conventions).
+- **Author's decision:** a single git-ignored `.env` at the repository root replaces `dev.env` and `prod.env`.
+- **Design:** one file per machine with the same keys and that machine's values. Spring Boot imports it through
+  `spring.config.import` (Java `.properties` syntax), Docker Compose reads it automatically (so `--env-file` is gone)
+  and `docker-compose.prod.yml` passes it to the backend as `env_file`; `infra/backup/backup.sh` reads its `PG_*` keys.
+  Keys whose defaults differ inside the production containers (`S3_ENDPOINT`, `REDIS_HOST`) stay commented so the
+  compose defaults apply there. The local file keeps the former production test values in a commented "Production"
+  block. No `.env.example` is committed: the README lists every key.

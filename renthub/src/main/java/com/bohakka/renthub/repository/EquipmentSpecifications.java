@@ -22,7 +22,7 @@ import org.springframework.data.jpa.domain.Specification;
 
 /**
  * Composable catalogue filters (FR-6, FR-7) as JPA Specifications. The distance is a spherical-law-of-cosines
- * expression in portable SQL functions (RADIANS, SIN, COS, ACOS, LEAST), so it runs on H2 and PostgreSQL alike.
+ * expression in portable SQL functions (RADIANS, SIN, COS, ACOS, LEAST), so it stays plain portable SQL.
  */
 public final class EquipmentSpecifications {
 
@@ -168,7 +168,7 @@ public final class EquipmentSpecifications {
 	/**
 	 * FR-7 rating sort: owners with published reviews first by their average (descending), owners without reviews
 	 * last, ties newest first. Written as an explicit CASE because NULLS LAST is not portable through Spring's Sort and
-	 * H2 here sorts NULLs high. Like {@link #nearestFirst}, ordering is added to the data query only.
+	 * PostgreSQL sorts NULLs high. Like {@link #nearestFirst}, ordering is added to the data query only.
 	 */
 	public static Specification<Equipment> bestRatedFirst() {
 		return (root, query, cb) -> {
