@@ -44,3 +44,6 @@ UI_TEST_REPORT.md
 
 # OpenStreetMap export cache (infra/osm/export_settlements.py)
 infra/osm/cache/
+
+# Python bytecode (infra scripts)
+__pycache__/
