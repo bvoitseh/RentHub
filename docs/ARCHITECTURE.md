@@ -139,8 +139,8 @@ under a moved pin (`GET /geocode/reverse`, D-49), identifying User-Agent, ≤ 1 
 ## 3. Frontend
 
 **Stack:** React 19, TypeScript strict, Vite 8, React Router 8 (data router), TanStack Query 5, React Hook Form +
-Zod, Tailwind CSS 4, Leaflet 1.9 used directly (no react-leaflet, D-34; OpenStreetMap tiles).
-ESLint enforces `max-lines: 150` on every file.
+Zod, Tailwind CSS 4, Leaflet 1.9 used directly (no react-leaflet, D-34; OpenStreetMap tiles). ESLint: `max-lines: 150`.
+**Themes (D-50):** dark palette in `index.css` (`data-theme`); `public/theme.js` + `useTheme` + header `ThemeToggle`.
 
 ```
 src/

@@ -21,6 +21,9 @@ export const uk = {
   nav: {
     main: 'Головна навігація',
     home: 'Головна',
+    darkTheme: 'Темна тема',
+    darkThemeHint: 'Увімкнути темну тему',
+    lightThemeHint: 'Увімкнути світлу тему',
   },
   home: {
     title: 'Орендуйте обладнання поруч із вами',

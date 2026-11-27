@@ -470,3 +470,24 @@ expects the address to follow the pin. **Decision:**
 - Same Nominatim limits as forward search: one shared request per second, answers cached in Redis 30 days (misses 1
   day) by the point rounded to 5 decimals. Stale answers to earlier drags are ignored on the frontend.
 
+## D-50 Dark mode by remapping the palette (2026-11-27)
+
+**Concerns:** NFR-6 (UI), author's request (not in the specification). **Decisions:**
+- A header switch («Темна тема») toggles light / dark on every page, for guests too. The first visit follows the system
+  setting (`prefers-color-scheme`); a choice is remembered per device in `localStorage` (author: no backend change).
+  `public/theme.js` applies it before React starts — an external file because the production CSP forbids inline
+  scripts — so there is no flash of the wrong theme.
+- **Approach:** components keep their Tailwind classes; `index.css` redefines the palette variables (slate, brand,
+  red / amber / emerald / sky / indigo tints and text shades) under `:root[data-theme='dark']`, with `color-scheme:
+  dark` for native controls. Two semantic tokens were added because their meaning differs between themes: `surface`
+  (cards, panels; was `bg-white`) and `on-accent` (text on teal buttons; was `text-white`). Shades used as solid
+  backgrounds with white text (red-600, emerald-600) are not remapped; the few exceptions use `dark:` variants
+  (`@custom-variant dark` follows `data-theme`).
+- **Palette** (based on the light theme): page #0b1120, cards #111a2e, subtle #1e293b, borders #263247 / #3a4a63,
+  headings #f1f5f9, body #cbd5e1, secondary #94a3b8, links teal #2dd4bf, primary button #14b8a6 with #042f2e text.
+  Measured in the browser on every main page: all text ≥ 4.5:1 except disabled past calendar days and empty review
+  stars (3.6:1, graphics ≥ 3:1). OSM tiles are dimmed, not inverted.
+- The light theme is visually unchanged except the footer attribution (text-slate-500 instead of 400 for contrast).
+  Known light-theme weaknesses left as they were: white on the teal button 3.7:1, amber stars and the amber owner
+  rating on white 2.1–3.2:1.
+

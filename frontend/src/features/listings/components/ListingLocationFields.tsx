@@ -75,7 +75,7 @@ export function ListingLocationFields({ form }: { form: UseFormReturn<ListingInp
           />
         )}
       />
-      <p className="min-h-4 text-xs text-red-600" aria-live="polite">
+      <p className="min-h-4 text-xs text-red-600 dark:text-red-700" aria-live="polite">
         {errors.point?.message}
       </p>
     </div>

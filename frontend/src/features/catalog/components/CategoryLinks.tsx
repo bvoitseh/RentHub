@@ -12,7 +12,7 @@ export function CategoryLinks() {
         <li key={category.id}>
           <Link
             to={`/catalog?categoryId=${category.id}`}
-            className="inline-block rounded-full border border-slate-300 bg-white px-4 py-1.5 text-sm text-slate-700 hover:border-brand-500 hover:text-brand-700"
+            className="inline-block rounded-full border border-slate-300 bg-surface px-4 py-1.5 text-sm text-slate-700 hover:border-brand-500 hover:text-brand-700"
           >
             {category.name}
           </Link>

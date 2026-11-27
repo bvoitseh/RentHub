@@ -1,4 +1,5 @@
 import { NavLink } from 'react-router'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import { UserMenu } from '@/features/auth/components/UserMenu'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { uk } from '@/i18n/uk'
@@ -12,7 +13,7 @@ export function Header() {
   const { data: user } = useCurrentUser()
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-slate-200 bg-surface/90 backdrop-blur">
       <div className="mx-auto flex h-14 w-full max-w-6xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex items-center gap-4">
           <NavLink to="/" className="flex items-center gap-2 text-lg font-bold text-brand-700">
@@ -46,7 +47,10 @@ export function Header() {
             )}
           </nav>
         </div>
-        <UserMenu />
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <UserMenu />
+        </div>
       </div>
     </header>
   )

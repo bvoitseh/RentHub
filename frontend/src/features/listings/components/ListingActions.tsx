@@ -35,7 +35,7 @@ export function ListingActions({ item }: { item: EquipmentSummary }) {
           {t.delete}
         </Button>
       </div>
-      {error && <p className="text-xs text-red-600">{problemMessage(error)}</p>}
+      {error && <p className="text-xs text-red-600 dark:text-red-700">{problemMessage(error)}</p>}
       <ConfirmDialog
         open={dialog === 'archive'}
         title={t.archiveConfirmTitle}

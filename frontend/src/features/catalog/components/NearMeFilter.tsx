@@ -26,7 +26,7 @@ export function NearMeFilter({ filters, onChange }: NearMeFilterProps) {
     onChange({ lat: undefined, lon: undefined, radiusKm: undefined, sort: filters.sort === 'distance' ? undefined : filters.sort })
 
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-3">
+    <div className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-surface p-3">
       <div className="flex flex-wrap items-center gap-2">
         <Button variant={active ? 'primary' : 'secondary'} loading={status === 'locating'} onClick={active ? disable : enable}>
           {active ? `✓ ${t.nearMe}` : t.nearMe}
@@ -42,7 +42,7 @@ export function NearMeFilter({ filters, onChange }: NearMeFilterProps) {
           />
         )}
       </div>
-      <p className={`text-xs ${status === 'denied' ? 'text-red-600' : 'text-slate-500'}`}>
+      <p className={`text-xs ${status === 'denied' ? 'text-red-600 dark:text-red-700' : 'text-slate-500'}`}>
         {status === 'denied' ? t.locationDenied : status === 'locating' ? t.locating : t.locationHint}
       </p>
     </div>

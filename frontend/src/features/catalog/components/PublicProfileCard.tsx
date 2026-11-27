@@ -16,7 +16,7 @@ export function PublicProfileCard({ profile }: { profile: PublicProfile }) {
   ]
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-6">
+    <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-surface p-6">
       {profile.deactivated && <Alert tone="warning">{t.deactivated}</Alert>}
       <div className="flex flex-col gap-2">
         <h1 className="text-2xl font-bold text-slate-900">{profile.name}</h1>

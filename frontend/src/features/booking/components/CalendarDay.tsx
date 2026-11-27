@@ -18,7 +18,7 @@ export function CalendarDay({ date, info, units, selectable, selected, edge, sho
   const free = info?.freeUnits ?? 0
   const busy = !info || info.blocked || free < units
   const tone = edge
-    ? 'bg-brand-600 text-white'
+    ? 'bg-brand-600 text-on-accent'
     : selected
       ? 'bg-brand-100 text-brand-900'
       : busy

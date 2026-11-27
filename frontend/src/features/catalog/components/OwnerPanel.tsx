@@ -8,7 +8,7 @@ const t = uk.catalog.card
 /** The owner on the card: name, account type, rating from published reviews (FR-19), link to the profile. */
 export function OwnerPanel({ owner }: { owner: OwnerBadge }) {
   return (
-    <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white p-4">
+    <section className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-surface p-4">
       <h2 className="text-sm font-medium text-slate-500">{t.owner}</h2>
       <p className="font-semibold text-slate-900">{owner.name}</p>
       <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">

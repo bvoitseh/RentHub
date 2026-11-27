@@ -10,7 +10,7 @@ import type { EquipmentDetails } from '@/features/catalog/types'
 import { uk } from '@/i18n/uk'
 
 const t = uk.booking.form
-const linkClass = 'self-start rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700'
+const linkClass = 'self-start rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-on-accent hover:bg-brand-700'
 
 /**
  * The card's booking block: availability calendar (FR-9) and, for a verified user who is not the owner, the booking
@@ -25,7 +25,7 @@ export function BookingPanel({ item }: { item: EquipmentDetails }) {
   const canBook = user?.role === 'USER' && user.emailVerified && !item.mine && item.status === 'ACTIVE'
 
   return (
-    <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-white p-4">
+    <section className="flex flex-col gap-4 rounded-lg border border-slate-200 bg-surface p-4">
       <h2 className="text-lg font-semibold text-slate-900">{canBook ? t.title : uk.booking.calendar.title}</h2>
       <p className="text-sm text-slate-600">{t.terms(item.minDays, item.maxDays)}</p>
       <AvailabilityCalendar

@@ -9,7 +9,7 @@ import { useMyListings } from '@/features/listings/hooks/useListings'
 import { uk } from '@/i18n/uk'
 
 const t = uk.listings
-const createLink = 'rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700'
+const createLink = 'rounded-md bg-brand-600 px-4 py-2 text-sm font-medium text-on-accent hover:bg-brand-700'
 
 /** The owner's dashboard: own listings in every status (rendered inside RequireAuth). */
 export function MyListingsPage() {

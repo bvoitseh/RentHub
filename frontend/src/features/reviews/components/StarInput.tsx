@@ -23,7 +23,7 @@ export function StarInput({ name, value, onChange }: StarInputProps) {
             className="sr-only"
             aria-label={uk.reviews.stars(n)}
           />
-          <span className={n <= value ? 'text-amber-500' : 'text-slate-300 hover:text-amber-300'}>★</span>
+          <span className={n <= value ? 'text-amber-500' : 'text-slate-300 hover:text-amber-300 dark:text-slate-400'}>★</span>
         </label>
       ))}
     </fieldset>

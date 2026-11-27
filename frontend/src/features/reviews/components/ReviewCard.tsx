@@ -18,7 +18,7 @@ export interface ReviewCardProps {
 /** One review: stars, author (or «деактивовано», FR-3c), date, text, the listing, the reply or the reply form. */
 export function ReviewCard({ review: r, title, showListing }: ReviewCardProps) {
   return (
-    <article className="flex flex-col gap-1 rounded-md border border-slate-200 bg-white p-3 text-sm">
+    <article className="flex flex-col gap-1 rounded-md border border-slate-200 bg-surface p-3 text-sm">
       <div className="flex flex-wrap items-center gap-2">
         <Stars value={r.rating} />
         <span className="font-medium text-slate-900">
