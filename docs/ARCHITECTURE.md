@@ -148,7 +148,7 @@ src/
 ├─ app/        App.tsx (providers) · router.tsx (route table, auth pages lazy-loaded) · queryClient.ts
 ├─ api/        client.ts (fetch wrapper: JSON, same-origin cookies, CSRF header, ProblemError) · problem.ts · csrf.ts
 │              · formErrors.ts (backend field violations → react-hook-form) · health.ts
-├─ components/layout/  AppLayout · Header · Footer · BackendStatus
+├─ components/layout/  AppLayout · Header · Sidebar/MobileNav → SideNav (navItems, D-53) · Footer · BackendStatus
 ├─ components/ui/      Button · Input · Select + SelectMenu (searchable, D-51) · Checkbox · FormField · Dialog · Alert · States
 ├─ components/map/     leaflet.ts (tiles, icon, helpers) · useLeafletMap (callback-ref map lifecycle) · MapView · PinPicker
 ├─ pages/      Home · NotFound · Login · Register · ForgotPassword · ResetPassword · VerifyEmail · Profile · Catalog ·

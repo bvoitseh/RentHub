@@ -524,3 +524,16 @@ expects the address to follow the pin. **Decision:**
 - **Limits:** multipart max file 50 MB and request 55 MB (photos are still checked against 5 MB by the photo service);
   Nginx `client_max_body_size 55m`, and the CSP gains `media-src` for the storage origin. The photo-position check
   constraint is widened to 0–9 in V15.
+
+## D-53 Side menu instead of header buttons (2026-11-27)
+
+- **Concerns:** NFR-6 (responsive UI).
+- **Author's decision:** the page links move from the header into a side menu: a fixed left sidebar on wide screens
+  (`lg` and up) and a slide-out drawer opened by ☰ on narrower screens. Profile, logout, login/register and the theme
+  switch stay in the header.
+- **Design:** one list of items (`navItems`, with the same role rules as before: guests see Головна and Каталог,
+  users also see their bookings, listings and requests, the admin sees Адміністрування) rendered by `SideNav` in both
+  places. The drawer is a modal `<dialog>`, which gives focus trapping, Escape and focus return without extra code;
+  it also closes on a link, the backdrop or a route change, and locks page scrolling while open. Before this change
+  the header links were hidden on phones with no alternative, so phones now get navigation too. On phones the logo
+  shows the icon only, so the header fits on one line.
