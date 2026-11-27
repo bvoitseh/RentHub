@@ -16,7 +16,6 @@ import com.bohakka.renthub.properties.RecommendationProperties;
 import com.bohakka.renthub.repository.EquipmentPhotoRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.repository.UserRepository;
-import com.bohakka.renthub.service.Geocoder;
 import com.bohakka.renthub.service.RecommendationService;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -27,10 +26,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 /**
- * {@link RecommendationService}. The point is the browser location (consent only), else the geocoded profile city,
+ * {@link RecommendationService}. The point is the browser location (consent only), else the profile settlement,
  * else the start city (FR-16). Public listings within the radius, not the viewer's own, ordered nearest first, then
  * in-season categories, then owner rating, then newest (author's order, D-44). Not transactional on purpose: the
  * city lookup may call Nominatim, which must not hold a database transaction; the queries fetch what they map.
@@ -42,7 +40,6 @@ public class RecommendationServiceImpl implements RecommendationService {
 	private final EquipmentRepository equipment;
 	private final EquipmentPhotoRepository photos;
 	private final UserRepository users;
-	private final Geocoder geocoder;
 	private final EquipmentMapper mapper;
 	private final RecommendationProperties properties;
 	private final Clock clock;
@@ -73,12 +70,9 @@ public class RecommendationServiceImpl implements RecommendationService {
 		if (viewer != null && viewer.isGeoConsent() && lat != null && lon != null) {
 			return new Located(new GeoPoint(lat, lon), new Origin(Source.BROWSER, null));
 		}
-		if (viewer != null && StringUtils.hasText(viewer.getCity())) {
-			String city = viewer.getCity().trim();
-			var geocoded = geocoder.geocode(city);
-			if (geocoded.isPresent()) {
-				return new Located(new GeoPoint(geocoded.get().lat(), geocoded.get().lon()), new Origin(Source.CITY, city));
-			}
+		if (viewer != null && viewer.getSettlement() != null) {
+			// D-48: the profile settlement's own coordinates; no geocoding.
+			return new Located(viewer.getSettlement().location(), new Origin(Source.CITY, viewer.getSettlement().getLabel()));
 		}
 		return new Located(new GeoPoint(properties.startLat(), properties.startLon()),
 			new Origin(Source.START_CITY, properties.startCity()));

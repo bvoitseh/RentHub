@@ -11,6 +11,14 @@ export function Footer() {
           <Link to="/privacy" className="text-brand-700 hover:underline">
             {uk.privacy.link}
           </Link>
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+            className="block text-xs text-slate-400 hover:underline"
+          >
+            {uk.address.attribution}
+          </a>
         </span>
         <BackendStatus />
       </div>

@@ -1,3 +1,4 @@
+import type { Settlement } from '@/features/address/types'
 import type { OwnerType } from '@/features/auth/types'
 
 export type ItemCondition = 'NEW' | 'EXCELLENT' | 'GOOD' | 'FAIR'
@@ -33,6 +34,7 @@ export interface EquipmentSummary {
   title: string
   pricePerDay: number
   categoryName: string
+  city: string
   address: string
   coverUrl: string | null
   quantity: number
@@ -62,6 +64,8 @@ export interface EquipmentDetails {
   deliveryNote: string | null
   address: string
   city: string
+  settlement: Settlement
+  postalCode: string | null
   lat: number
   lon: number
   status: EquipmentStatus

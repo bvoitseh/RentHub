@@ -82,9 +82,18 @@ public class Equipment {
 	@Column(nullable = false, length = 300)
 	private String address;
 
-	/** FR-23 E5: the city, suggested by geocoding and confirmed by the owner (D-46). */
+	/** FR-23 E5: copy of the settlement name (D-46, D-48). */
 	@Column(nullable = false, length = 100)
 	private String city;
+
+	/** FR-4: region + settlement of the listing (D-48); the address holds the street and house. */
+	@ManyToOne(fetch = FetchType.LAZY, optional = false)
+	@JoinColumn(name = "settlement_id", nullable = false)
+	private Settlement settlement;
+
+	/** Optional five-digit postal code, prefilled from geocoding (D-48). */
+	@Column(name = "postal_code", length = 5)
+	private String postalCode;
 
 	@Column(nullable = false)
 	private double lat;
@@ -107,13 +116,13 @@ public class Equipment {
 	private List<EquipmentPhoto> photos = new ArrayList<>();
 
 	public Equipment(User owner, Category category, String title, String description, ItemCondition condition,
-			RentalTerms terms, String address, String city, GeoPoint point, Instant now) {
+			RentalTerms terms, ListingAddress location, Instant now) {
 		this.owner = owner;
 		this.status = EquipmentStatus.ACTIVE;
 		this.createdAt = now;
 		describe(category, title, description, condition, now);
 		applyTerms(terms, now);
-		relocate(address, city, point, now);
+		relocate(location, now);
 	}
 
 	/** Descriptive fields (FR-5: always editable, even with active bookings). */
@@ -136,10 +145,13 @@ public class Equipment {
 		this.updatedAt = now;
 	}
 
-	/** FR-4: the address as typed, its city and the pin the owner confirmed (geocoded or placed by hand). */
-	public void relocate(String address, String city, GeoPoint point, Instant now) {
-		this.address = address.trim();
-		this.city = city.trim();
+	/** FR-4: settlement, street and house, optional postal code and the pin the owner confirmed (D-48). */
+	public void relocate(ListingAddress location, Instant now) {
+		GeoPoint point = location.point();
+		this.settlement = location.settlement();
+		this.city = location.settlement().getName();
+		this.address = location.street().trim();
+		this.postalCode = location.postalCode();
 		this.lat = point.lat();
 		this.lon = point.lon();
 		this.updatedAt = now;

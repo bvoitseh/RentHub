@@ -1,3 +1,5 @@
+import type { Settlement } from '@/features/address/types'
+
 /** USER can both rent and rent out equipment; ADMIN is the platform administrator. */
 export type Role = 'USER' | 'ADMIN'
 export type OwnerType = 'PRIVATE' | 'COMPANY'
@@ -11,6 +13,8 @@ export interface User {
   phone: string | null
   role: Role
   city: string | null
+  /** Region + settlement (D-48); null only for the admin. */
+  settlement: Settlement | null
   geoConsent: boolean
   /** Account type; null only for the admin. */
   ownerType: OwnerType | null
@@ -28,7 +32,7 @@ export interface RegisterPayload {
   email: string
   phone: string
   password: string
-  city: string
+  settlementId: number
   ownerType: OwnerType
   companyName?: string
   edrpou?: string
@@ -37,7 +41,7 @@ export interface RegisterPayload {
 export interface ProfilePayload {
   name: string
   phone: string
-  city: string
+  settlementId: number
   ownerType?: OwnerType
   companyName?: string
   edrpou?: string

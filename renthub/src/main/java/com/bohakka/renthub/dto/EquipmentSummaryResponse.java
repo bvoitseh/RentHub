@@ -8,7 +8,7 @@ import java.math.BigDecimal;
  * rental dates (FR-7: days × units × price per day); {@code coverUrl} may be null.
  */
 public record EquipmentSummaryResponse(Long id, String title, BigDecimal pricePerDay, String categoryName,
-		String address, String coverUrl, int quantity, int minDays, Integer maxDays, boolean pickupAvailable,
+		String city, String address, String coverUrl, int quantity, int minDays, Integer maxDays, boolean pickupAvailable,
 		boolean deliveryAvailable, EquipmentStatus status, OwnerBadge owner, Double distanceKm,
 		BigDecimal totalPrice) {
 }

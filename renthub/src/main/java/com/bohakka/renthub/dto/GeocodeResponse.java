@@ -1,5 +1,5 @@
 package com.bohakka.renthub.dto;
 
-/** FR-4: address preview for the map pin; {@code city} (city, town or village) may be null (D-46). */
-public record GeocodeResponse(double lat, double lon, String displayName, String city) {
+/** A Nominatim answer: the point, its description and the postal code when it is a single five-digit one. */
+public record GeocodeResponse(double lat, double lon, String displayName, String postalCode) {
 }

@@ -14,7 +14,7 @@ export function EquipmentFacts({ item }: { item: EquipmentDetails }) {
     [t.handover, handover],
   ]
   if (item.deliveryNote) rows.push([t.deliveryNote, item.deliveryNote])
-  rows.push([t.address, item.address])
+  rows.push([t.address, [item.address, item.settlement.label, item.postalCode].filter(Boolean).join(', ')])
 
   return (
     <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-[max-content_1fr]">

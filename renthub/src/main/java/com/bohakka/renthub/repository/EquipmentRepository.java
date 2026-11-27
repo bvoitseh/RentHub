@@ -22,7 +22,7 @@ public interface EquipmentRepository extends JpaRepository<Equipment, Long>, Jpa
 	Page<Equipment> findAll(Specification<Equipment> spec, Pageable pageable);
 
 	/** Equipment card and editing: everything the card shows in one query. */
-	@EntityGraph(attributePaths = {"owner", "category", "photos"})
+	@EntityGraph(attributePaths = {"owner", "category", "photos", "settlement"})
 	Optional<Equipment> findWithDetailsById(Long id);
 
 	/** FR-22: listings in every status whose title contains {@code q} (lower case), newest first. */

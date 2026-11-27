@@ -6,6 +6,8 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
+import { SettlementPicker } from '@/features/address/components/SettlementPicker'
+import { toSettlementValue } from '@/features/address/types'
 import { OwnerTypeFields } from '@/features/auth/components/OwnerTypeFields'
 import { PhoneInput } from '@/features/auth/components/PhoneInput'
 import { useUpdateProfile } from '@/features/auth/hooks/useAccountMutations'
@@ -18,7 +20,7 @@ const t = uk.auth
 const p = uk.profile.edit
 
 function toPayload(values: ProfileInput): ProfilePayload {
-  const base = { name: values.name, phone: toApiPhone(values.phone), city: values.city }
+  const base = { name: values.name, phone: toApiPhone(values.phone), settlementId: values.settlement!.id }
   if (!values.hasOwnerType || values.ownerType === '') return base
   const company = values.ownerType === 'COMPANY' ? { companyName: values.companyName, edrpou: values.edrpou } : {}
   return { ...base, ownerType: values.ownerType, ...company }
@@ -31,7 +33,7 @@ export function ProfileForm({ user }: { user: User }) {
     defaultValues: {
       name: user.name,
       phone: fromApiPhone(user.phone),
-      city: user.city ?? '',
+      settlement: toSettlementValue(user.settlement),
       hasOwnerType: user.role === 'USER',
       ownerType: user.ownerType ?? '',
       companyName: user.companyName ?? '',
@@ -71,9 +73,13 @@ export function ProfileForm({ user }: { user: User }) {
           render={({ field: { ref, ...phone } }) => <PhoneInput id="prof-phone" ref={ref} invalid={!!errors.phone} {...phone} />}
         />
       </FormField>
-      <FormField label={t.fields.city} htmlFor="prof-city" error={errors.city?.message}>
-        <Input id="prof-city" autoComplete="address-level2" invalid={!!errors.city} {...form.register('city')} />
-      </FormField>
+      <Controller
+        control={form.control}
+        name="settlement"
+        render={({ field: { value, onChange } }) => (
+          <SettlementPicker idPrefix="prof" value={value} onChange={onChange} error={errors.settlement?.message} />
+        )}
+      />
       {user.role === 'USER' && (
         <OwnerTypeFields register={form.register} errors={errors} ownerType={ownerType} idPrefix="prof" />
       )}

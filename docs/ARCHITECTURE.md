@@ -10,9 +10,8 @@ renthub/
 ├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub; Dockerfile (JRE, non-root)
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4; Dockerfile (Node build → Nginx)
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml       local: redis · s3 (SeaweedFS) + s3-init; docker-compose.prod.yml: frontend (Nginx) ·
-│                           backend · redis · s3 + s3-init, PostgreSQL external (D-47); *.prod.pgnet.yml: DB network
-├─ infra/       seaweedfs/ (S3 identities, bucket, prod entrypoint) · nginx/ · backup/backup.sh · seed/ (demo data, D-36)
+├─ docker-compose.yml       local: redis · s3 + s3-init; *.prod.yml: Nginx · backend · redis · s3, external PostgreSQL (D-47)
+├─ infra/       seaweedfs/ (S3, prod entrypoint) · nginx/ · backup/backup.sh · seed/ (D-36) · osm/ (settlements, D-48)
 └─ dev.env · prod.env   local / production environment (git-ignored); keys listed in the README
 ```
 
@@ -29,11 +28,11 @@ New features add classes to these packages; a new package is created only for a 
 |---|---|
 | `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events for index clean-up on expiry), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a), `S3Config` (S3 client), `GeocodingConfig` (Nominatim `RestClient`); `AsyncConfig` also enables scheduling |
 | `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`), `StorageProperties` (`app.storage.*`), `GeocodingProperties` (`app.geocoding.*`), `BookingProperties` (`app.booking.*`) |
-| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`) |
+| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`), `AddressController` (`/regions`, `/settlements`) |
 | `dto` | request/response records (`RegisterRequest`, `UserResponse`, `EquipmentRequest`, `CatalogQuery`, `EquipmentSummaryResponse`, `EquipmentDetailsResponse`, `PageResponse`, `PublicProfileResponse`, `BookingRequest`, `BookingResponse`, `AvailabilityResponse`, `BookingRef`, `ContactResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), `Complaint` (+ `ComplaintStatus`, FR-21), value types `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
+| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), `Complaint` (+ `ComplaintStatus`, FR-21), `Region` + `Settlement` (immutable reference data, D-48), value types `ListingAddress`, `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
 | `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `ComplaintService`, `ModerationService`, `CategoryAdminService`, `CommissionService`, `StatisticsService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `ComplaintService`, `ModerationService`, `CategoryAdminService`, `CommissionService`, `StatisticsService`, `AddressService`, `ListingLocationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
 | `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
@@ -74,7 +73,7 @@ publishes lone reviews after the window. Ratings travel on `OwnerBadge`, booking
 the catalogue `rating` sort is `EquipmentSpecifications.bestRatedFirst`.
 
 **Recommendations (FR-16, FR-17) in short:** `RecommendationServiceImpl` picks the point (browser location with consent,
-else the geocoded profile city, else the start city from `app.recommendations.*`) outside any transaction, then
+else the profile settlement's own coordinates (D-48), else the start city from `app.recommendations.*`), then
 queries public listings within the radius, not the viewer's own, ordered by
 `EquipmentSpecifications.nearestThenSeason` (distance, in season via `Category.isInSeason`, rating, newest; D-44).
 
@@ -134,8 +133,8 @@ publishes reviews whose window has ended.
 **Integrations** (one small application-owned interface each, configured only through `${ENV}`):
 e-mail via `MailGateway` (SMTP, `SMTP_*`); photos via `ObjectStorage` (`S3ObjectStorage`, AWS SDK v2 against any
 S3-compatible service; SeaweedFS locally, `S3_*`, public-read bucket); geocoding via `Geocoder` (`NominatimGeocoder`:
-identifying User-Agent, ≤ 1 request/s, answers cached in Redis 30 days, misses 1 day; a failure means "place the pin
-by hand").
+structured street + settlement + region search for listing pins and postal codes, and reverse lookup of the street
+under a moved pin (`GET /geocode/reverse`, D-49), identifying User-Agent, ≤ 1 request/s shared, cached in Redis; regions and settlements come from our own tables, never from Nominatim, D-48).
 
 ## 3. Frontend
 
@@ -163,6 +162,7 @@ src/
 │                    facts, owner panel, equipment view, public profile card, category links)
 └─ features/listings/ types.ts · api/listingsApi.ts · hooks/useListings.ts · schemas/listingSchema.ts · components/
                      (ListingForm + basics/terms/location sections, PhotoManager, MyListingRow, ListingActions, ConfirmDialog)
+└─ features/address/ hooks/useAddress (debounced) · components/SettlementPicker (region + settlement combobox; forms, D-48)
 └─ features/booking/ types.ts · dates.ts (ISO local dates, month grid) · api/bookingApi.ts · hooks/{useBookingQueries,
                      useBookingMutations, useDateRange} · components/ (AvailabilityCalendar + CalendarDay, BookingPanel +
                      BookingForm + PriceSummary, BookingList + BookingRow + BookingActions + CancelDialog, BookingStatusBadge,

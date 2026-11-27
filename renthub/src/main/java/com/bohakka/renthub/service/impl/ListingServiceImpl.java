@@ -7,6 +7,7 @@ import com.bohakka.renthub.dto.EquipmentSummaryResponse;
 import com.bohakka.renthub.entity.Booking;
 import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.entity.Category;
+import com.bohakka.renthub.entity.ListingAddress;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.EquipmentPhoto;
 import com.bohakka.renthub.entity.GeoPoint;
@@ -22,6 +23,7 @@ import com.bohakka.renthub.repository.CategoryRepository;
 import com.bohakka.renthub.repository.EquipmentPhotoRepository;
 import com.bohakka.renthub.repository.EquipmentRepository;
 import com.bohakka.renthub.repository.UserRepository;
+import com.bohakka.renthub.service.AddressService;
 import com.bohakka.renthub.service.ListingService;
 import java.time.Clock;
 import java.time.LocalDate;
@@ -47,6 +49,7 @@ public class ListingServiceImpl implements ListingService {
 	private final EquipmentAccess access;
 	private final EquipmentMapper mapper;
 	private final ApplicationEventPublisher events;
+	private final AddressService addresses;
 	private final Clock clock;
 
 	@Override
@@ -56,8 +59,7 @@ public class ListingServiceImpl implements ListingService {
 			.orElseThrow(() -> new NotFoundException("user.not_found", "user.not_found"));
 		access.assertMayPublish(owner);
 		Equipment listing = new Equipment(owner, category(request.categoryId()), request.title(), request.description(),
-			request.condition(), terms(request), request.address(), request.city(), new GeoPoint(request.lat(), request.lon()),
-			clock.instant());
+			request.condition(), terms(request), address(request), clock.instant());
 		equipment.save(listing);
 		return mapper.details(listing, ownerId);
 	}
@@ -74,7 +76,7 @@ public class ListingServiceImpl implements ListingService {
 		listing.describe(category(request.categoryId()), request.title(), request.description(), request.condition(),
 			clock.instant());
 		listing.applyTerms(terms, clock.instant());
-		listing.relocate(request.address(), request.city(), new GeoPoint(request.lat(), request.lon()), clock.instant());
+		listing.relocate(address(request), clock.instant());
 		return mapper.details(listing, ownerId);
 	}
 
@@ -115,6 +117,12 @@ public class ListingServiceImpl implements ListingService {
 	private void lock(Long equipmentId) {
 		equipment.lockById(equipmentId)
 			.orElseThrow(() -> new NotFoundException("equipment.not_found", "equipment.not_found"));
+	}
+
+	private ListingAddress address(EquipmentRequest request) {
+		String postalCode = request.postalCode() == null || request.postalCode().isBlank() ? null : request.postalCode();
+		return new ListingAddress(addresses.settlement(request.settlementId()), request.address(), postalCode,
+			new GeoPoint(request.lat(), request.lon()));
 	}
 
 	private Category category(Long categoryId) {

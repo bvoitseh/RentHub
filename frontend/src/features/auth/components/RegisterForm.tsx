@@ -7,6 +7,7 @@ import { Alert } from '@/components/ui/Alert'
 import { Button } from '@/components/ui/Button'
 import { FormField } from '@/components/ui/FormField'
 import { Input } from '@/components/ui/Input'
+import { SettlementPicker } from '@/features/address/components/SettlementPicker'
 import { OwnerTypeFields } from '@/features/auth/components/OwnerTypeFields'
 import { PhoneInput } from '@/features/auth/components/PhoneInput'
 import { useRegister } from '@/features/auth/hooks/useAuthMutations'
@@ -18,7 +19,7 @@ import { uk } from '@/i18n/uk'
 const t = uk.auth
 
 function toPayload(values: RegisterInput): RegisterPayload {
-  const base = { name: values.name, email: values.email, phone: toApiPhone(values.phone), password: values.password, city: values.city }
+  const base = { name: values.name, email: values.email, phone: toApiPhone(values.phone), password: values.password, settlementId: values.settlement!.id }
   const company = values.ownerType === 'COMPANY' ? { companyName: values.companyName, edrpou: values.edrpou } : {}
   return { ...base, ownerType: values.ownerType, ...company }
 }
@@ -57,7 +58,13 @@ export function RegisterForm() {
           render={({ field: { ref, ...phone } }) => <PhoneInput id="reg-phone" ref={ref} invalid={!!errors.phone} {...phone} />}
         />
       </FormField>
-      {field('city', t.fields.city, { autoComplete: 'address-level2' })}
+      <Controller
+        control={form.control}
+        name="settlement"
+        render={({ field: { value, onChange } }) => (
+          <SettlementPicker idPrefix="reg" value={value} onChange={onChange} error={errors.settlement?.message} />
+        )}
+      />
       {field('password', t.fields.password, { type: 'password', autoComplete: 'new-password' }, t.register.passwordHint)}
       {field('passwordConfirm', t.fields.passwordConfirm, { type: 'password', autoComplete: 'new-password' })}
       <OwnerTypeFields register={form.register} errors={errors} ownerType={ownerType} idPrefix="reg" />

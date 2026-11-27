@@ -44,3 +44,9 @@ UI_TEST_REPORT.md
 
 # Local database backups (infra/backup/backup.sh)
 backups/
+
+# OpenStreetMap export cache (infra/osm/export_settlements.py)
+infra/osm/cache/
+
+# Python bytecode (infra scripts)
+__pycache__/

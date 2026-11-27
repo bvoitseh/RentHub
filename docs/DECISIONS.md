@@ -420,3 +420,53 @@ had been archived. Locks: the user's listings → the user → each booking (D-4
   multipart overhead) are in place; `renthub.conf.template` and the README mark what to change when HTTPS comes.
 - **Privacy policy (NFR-5):** a static Ukrainian page at `/privacy`, linked from the footer and the registration form.
 
+## D-48 Structured addresses: regions and settlements from OpenStreetMap, legal status from Wikidata (2026-11-27)
+
+**Concerns:** FR-1, FR-4, FR-16, FR-17, FR-23 (E5), NFR-5, NFR-13. **Problem:** free-text cities were geocoded by
+name, and Nominatim answered «Львів» with a village in Dnipropetrovsk oblast. **Decisions (author's):**
+- **Source:** OpenStreetMap, exported once through the public Overpass API (approved one-off, sequential queries with
+  pauses, backoff and an identifying User-Agent; `infra/osm/export_settlements.py`), and the legal status of each
+  settlement from Wikidata P31 (`infra/osm/wikidata_status.py`). KATOTTH (2021 file only), Nova Poshta, Ukrposhta
+  (contract) and Google were rejected. Data © OpenStreetMap contributors, **ODbL 1.0**; Wikidata **CC0** — the
+  attribution is shown in the site footer, on the map and on the privacy page.
+- **Content** (`infra/osm/build_reference.py`, generated into V12): the 27 regions with an ISO 3166-2 code; nodes
+  `place=city|town|village|hamlet` with a Ukrainian name (`name:uk`, or the plain name in the Ukrainian alphabet), one
+  row per OSM id, coordinates required. District (admin_level 6) and territorial community (admin_level 7) by a local
+  point-in-polygon test over 2020 Ukrainian boundaries only (tagged `katotth`, newest relation per code — this drops
+  the Russian-era Crimean units). Status місто / селище / село from Wikidata, Ukraine-specific classes winning a
+  conflict; unclear → no status (never the OSM size). Postal code: the node's single five-digit `postal_code`.
+  Result: 29,752 settlements (449 міст, 1,473 селищ, 27,117 сіл, 713 without status).
+- **Label:** «с. Назва, Район р-н»; the community is added only when name + district is ambiguous; if still ambiguous,
+  the postal code follows the name (author's choice). 13 labels (26 rows) remain identical — the same village mapped
+  twice in OSM.
+- **Use:** profile = region + settlement only (NFR-5); listing = region + settlement + street/house + optional postal
+  code (5 digits, prefilled, editable; a new suggestion replaces an earlier suggestion, never a typed code).
+  Suggestions come only from our database: case- and apostrophe-insensitive prefix, ≥ 2 characters, ≤ 20 results,
+  cities first, Ukrainian collation. Profile recommendations use the settlement's own coordinates (no geocoding).
+  Nominatim is used only for the listing street: structured search (street, city = settlement, state = region except
+  Kyiv / Sevastopol); the postal code comes from the settlement's OSM code for villages and селища, from the street
+  result for cities (falling back to the OSM code); without a street match the pin is the settlement centre and the
+  owner moves it. `users.city` and `equipment.city` stay as copies of the settlement name.
+- **Existing data (V13):** users → «м. Львів»; listings → Львів, or the suburb named at the start of the demo address
+  (Винники, Брюховичі, Пустомити, Городок, Жовква), the prefix removed from the address.
+- **Refresh:** `build_reference.py --refresh-sql` writes a migration that matches rows by OSM id (MERGE), inserts new
+  ones, updates renamed ones and marks rows missing from the export inactive; nothing is deleted, so users and
+  listings keep their references (README). Tested on H2 and PostgreSQL 18.
+- `User.settlement` is loaded eagerly (reference data, needed when the account is returned outside a transaction).
+
+## D-49 Moving the listing pin fills the address back in (2026-11-27)
+
+**Concerns:** FR-4, NFR-13. **Context:** FR-4 lets the owner correct the pin by moving it but says nothing about the
+address fields, so after «Вулицю не знайдено» the owner dragged the pin and the street field stayed empty. The author
+expects the address to follow the pin. **Decision:**
+- Placing or dragging the pin calls `GET /api/v1/geocode/reverse?settlementId&lat&lon` (logged-in users), which asks
+  Nominatim `/reverse` (building level, Ukrainian names) and returns «street, house» (`road`, else `pedestrian` or
+  `square`; house number when known) and the postal code chosen by the D-48 rule for the selected settlement.
+- The street field is **overwritten** when a street is found (the pin was moved on purpose); the postal code follows the
+  D-48 rule (an empty field or our own earlier suggestion only). Without a street the field is kept and the owner is
+  asked to type it.
+- The region and settlement are **not** changed, even if the pin is moved into another settlement: matching the
+  reverse answer to our reference data is out of scope (KISS); the owner changes them by hand.
+- Same Nominatim limits as forward search: one shared request per second, answers cached in Redis 30 days (misses 1
+  day) by the point rounded to 5 decimals. Stale answers to earlier drags are ignored on the frontend.
+

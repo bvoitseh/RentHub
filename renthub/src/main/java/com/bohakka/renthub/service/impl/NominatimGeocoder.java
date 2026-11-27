@@ -1,12 +1,16 @@
 package com.bohakka.renthub.service.impl;
 
 import com.bohakka.renthub.dto.GeocodeResponse;
+import com.bohakka.renthub.dto.ReverseGeocodeResponse;
 import com.bohakka.renthub.entity.GeocodeCacheEntry;
 import com.bohakka.renthub.properties.GeocodingProperties;
 import com.bohakka.renthub.repository.GeocodeCacheRepository;
 import com.bohakka.renthub.service.Geocoder;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Locale;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.extern.slf4j.Slf4j;
@@ -39,19 +43,33 @@ public class NominatimGeocoder implements Geocoder {
 	}
 
 	@Override
-	public Optional<GeocodeResponse> geocode(String address) {
-		String key = address.trim().replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+	public Optional<GeocodeResponse> geocode(String street, String settlement, String region) {
+		String key = String.join("|", street, settlement, region == null ? "" : region).trim().replaceAll("\\s+", " ")
+			.toLowerCase(Locale.ROOT);
+		return cached(key, () -> search(street, settlement, region),
+			r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName(), r.postalCode()),
+			e -> new GeocodeResponse(e.getLat(), e.getLon(), e.getDisplayName(), e.getPostalCode()));
+	}
+
+	/** D-49: the point rounded to 5 decimals (about a metre) is the cache key; the street is kept as the name. */
+	@Override
+	public Optional<ReverseGeocodeResponse> reverse(double lat, double lon) {
+		String key = String.format(Locale.ROOT, "reverse|%.5f|%.5f", lat, lon);
+		return cached(key, () -> reverseSearch(lat, lon),
+			r -> GeocodeCacheEntry.found(key, lat, lon, r.street(), r.postalCode()),
+			e -> new ReverseGeocodeResponse(e.getDisplayName(), e.getPostalCode()));
+	}
+
+	private <T> Optional<T> cached(String key, Supplier<Optional<T>> lookup,
+			Function<T, GeocodeCacheEntry> toEntry,
+			Function<GeocodeCacheEntry, T> fromEntry) {
 		Optional<GeocodeCacheEntry> cached = cache.findById(key);
 		if (cached.isPresent()) {
-			GeocodeCacheEntry entry = cached.get();
-			return entry.isFound()
-				? Optional.of(new GeocodeResponse(entry.getLat(), entry.getLon(), entry.getDisplayName(), entry.getCity()))
-				: Optional.empty();
+			return cached.get().isFound() ? Optional.of(fromEntry.apply(cached.get())) : Optional.empty();
 		}
 		try {
-			Optional<GeocodeResponse> result = search(address.trim());
-			cache.save(result.map(r -> GeocodeCacheEntry.found(key, r.lat(), r.lon(), r.displayName(), r.city()))
-				.orElseGet(() -> GeocodeCacheEntry.miss(key)));
+			Optional<T> result = lookup.get();
+			cache.save(result.map(toEntry).orElseGet(() -> GeocodeCacheEntry.miss(key)));
 			return result;
 		} catch (RestClientException | NumberFormatException ex) {
 			log.warn("Geocoding failed: {}", ex.getMessage());
@@ -59,10 +77,12 @@ public class NominatimGeocoder implements Geocoder {
 		}
 	}
 
-	private Optional<GeocodeResponse> search(String address) {
+	/** Structured search (street + city + state), so a same-named settlement elsewhere is never picked (D-48). */
+	private Optional<GeocodeResponse> search(String street, String settlement, String region) {
 		waitForSlot();
 		Place[] places = nominatim.get()
-			.uri(uri -> uri.path("/search").queryParam("q", address).queryParam("format", "jsonv2")
+			.uri(uri -> uri.path("/search").queryParam("street", street).queryParam("city", settlement)
+				.queryParamIfPresent("state", Optional.ofNullable(region)).queryParam("format", "jsonv2")
 				.queryParam("limit", 1).queryParam("addressdetails", 1).queryParam("countrycodes", properties.countryCodes())
 				.queryParam("accept-language", "uk").build())
 			.retrieve()
@@ -72,7 +92,24 @@ public class NominatimGeocoder implements Geocoder {
 		}
 		Place place = places[0];
 		return Optional.of(new GeocodeResponse(Double.parseDouble(place.lat()), Double.parseDouble(place.lon()),
-			place.displayName(), place.address() == null ? null : place.address().settlement()));
+			place.displayName(), place.address() == null ? null : place.address().singlePostcode()));
+	}
+
+	/** Reverse lookup at building level; only an answer with a street is useful for the address field. */
+	private Optional<ReverseGeocodeResponse> reverseSearch(double lat, double lon) {
+		waitForSlot();
+		Place place = nominatim.get()
+			.uri(uri -> uri.path("/reverse").queryParam("lat", lat).queryParam("lon", lon).queryParam("zoom", 18)
+				.queryParam("format", "jsonv2").queryParam("addressdetails", 1).queryParam("accept-language", "uk").build())
+			.retrieve()
+			.body(Place.class);
+		if (place == null || place.address() == null || place.address().streetName() == null) {
+			return Optional.empty();
+		}
+		Address address = place.address();
+		String street = address.houseNumber() == null ? address.streetName()
+			: address.streetName() + ", " + address.houseNumber();
+		return Optional.of(new ReverseGeocodeResponse(street, address.singlePostcode()));
 	}
 
 	/** NFR-13: at most one Nominatim request per second; concurrent callers queue here. */
@@ -92,11 +129,18 @@ public class NominatimGeocoder implements Geocoder {
 	private record Place(String lat, String lon, @JsonProperty("display_name") String displayName, Address address) {
 	}
 
-	/** Nominatim names the settlement by its kind; the first one present is the listing's city (D-46). */
-	private record Address(String city, String town, String village) {
+	private record Address(String postcode, String road, String pedestrian, String square,
+			@JsonProperty("house_number") String houseNumber) {
 
-		String settlement() {
-			return city != null ? city : town != null ? town : village;
+		/** The street-like part of a reverse answer; null when the point is not on or near a street. */
+		String streetName() {
+			return Stream.of(road, pedestrian, square).filter(name -> name != null && !name.isBlank()).findFirst()
+				.orElse(null);
+		}
+
+		/** Only a single five-digit code is useful as a suggestion (D-48). */
+		String singlePostcode() {
+			return postcode != null && postcode.matches("\\d{5}") ? postcode : null;
 		}
 	}
 }

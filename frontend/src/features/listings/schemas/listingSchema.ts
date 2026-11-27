@@ -1,6 +1,8 @@
 import { z } from 'zod'
 import type { EquipmentDetails } from '@/features/catalog/types'
 import type { ListingPayload } from '@/features/listings/types'
+import { settlementField } from '@/features/address/schema'
+import { toSettlementValue } from '@/features/address/types'
 import { uk } from '@/i18n/uk'
 
 const v = uk.validation
@@ -27,7 +29,8 @@ export const listingSchema = z
     deliveryAvailable: z.boolean(),
     deliveryNote: z.string().trim().max(500, { error: v.deliveryNoteMax }),
     address: z.string().trim().min(1, { error: v.required }).max(300, { error: v.addressMax }),
-    city: z.string().trim().min(1, { error: v.required }).max(100, { error: v.cityMax }),
+    settlement: settlementField,
+    postalCode: z.string().trim().regex(/^(\d{5})?$/, { error: v.postalCode }),
     point: z.object({ lat: z.number(), lon: z.number() }).nullable(),
   })
   .refine((d) => d.maxDays === '' || Number(d.maxDays) >= Number(d.minDays), { path: ['maxDays'], error: v.maxDaysBelowMin })
@@ -49,7 +52,8 @@ export const emptyListing: ListingInput = {
   deliveryAvailable: false,
   deliveryNote: '',
   address: '',
-  city: '',
+  settlement: null,
+  postalCode: '',
   point: null,
 }
 
@@ -67,7 +71,8 @@ export function toListingInput(item: EquipmentDetails): ListingInput {
     deliveryAvailable: item.deliveryAvailable,
     deliveryNote: item.deliveryNote ?? '',
     address: item.address,
-    city: item.city,
+    settlement: toSettlementValue(item.settlement),
+    postalCode: item.postalCode ?? '',
     point: { lat: item.lat, lon: item.lon },
   }
 }
@@ -86,8 +91,9 @@ export function toListingPayload(values: ListingInput): ListingPayload {
     pickupAvailable: values.pickupAvailable,
     deliveryAvailable: values.deliveryAvailable,
     deliveryNote: values.deliveryAvailable && values.deliveryNote ? values.deliveryNote : null,
+    settlementId: values.settlement!.id,
     address: values.address,
-    city: values.city,
+    postalCode: values.postalCode || null,
     lat: point.lat,
     lon: point.lon,
   }

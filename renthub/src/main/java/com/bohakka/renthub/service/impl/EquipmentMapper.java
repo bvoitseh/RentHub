@@ -5,6 +5,7 @@ import com.bohakka.renthub.dto.EquipmentDetailsResponse;
 import com.bohakka.renthub.dto.EquipmentSummaryResponse;
 import com.bohakka.renthub.dto.OwnerBadge;
 import com.bohakka.renthub.dto.PhotoResponse;
+import com.bohakka.renthub.dto.SettlementResponse;
 import com.bohakka.renthub.entity.Equipment;
 import com.bohakka.renthub.entity.User;
 import com.bohakka.renthub.service.ObjectStorage;
@@ -32,7 +33,7 @@ public class EquipmentMapper {
 
 	public EquipmentSummaryResponse summary(Equipment e, String coverKey, Double distanceKm, BigDecimal totalPrice) {
 		return new EquipmentSummaryResponse(e.getId(), e.getTitle(), e.getPricePerDay(), e.getCategory().getName(),
-			e.getAddress(), coverKey == null ? null : storage.publicUrl(coverKey), e.getQuantity(), e.getMinDays(),
+			e.getCity(), e.getAddress(), coverKey == null ? null : storage.publicUrl(coverKey), e.getQuantity(), e.getMinDays(),
 			e.getMaxDays(), e.isPickupAvailable(), e.isDeliveryAvailable(), e.getStatus(), owner(e.getOwner()),
 			distanceKm, totalPrice);
 	}
@@ -41,7 +42,7 @@ public class EquipmentMapper {
 		return new EquipmentDetailsResponse(e.getId(), e.getTitle(), e.getDescription(),
 			CategoryResponse.from(e.getCategory()), e.getCondition(), e.getPricePerDay(), e.getQuantity(),
 			e.getMinDays(), e.getMaxDays(), e.isPickupAvailable(), e.isDeliveryAvailable(), e.getDeliveryNote(),
-			e.getAddress(), e.getCity(), e.getLat(), e.getLon(), e.getStatus(), photos(e), owner(e.getOwner()),
+			e.getAddress(), e.getCity(), SettlementResponse.from(e.getSettlement()), e.getPostalCode(), e.getLat(), e.getLon(), e.getStatus(), photos(e), owner(e.getOwner()),
 			viewerId != null && e.isOwnedBy(viewerId), e.getCreatedAt());
 	}
 
