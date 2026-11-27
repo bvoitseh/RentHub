@@ -1,6 +1,6 @@
 import { api } from '@/api/client'
 import type { EquipmentDetails, EquipmentSummary, Photo } from '@/features/catalog/types'
-import type { GeocodeResult, ListingPayload } from '@/features/listings/types'
+import type { ListingLocation, ListingPayload } from '@/features/listings/types'
 
 /** The owner's listing endpoints (FR-4, FR-4a, FR-5) and the geocoding preview for the pin. */
 export const listingsApi = {
@@ -15,5 +15,5 @@ export const listingsApi = {
     return api.post<Photo[]>(`equipment/${id}/photos`, form)
   },
   removePhoto: (id: number, photoId: number) => api.delete<Photo[]>(`equipment/${id}/photos/${photoId}`),
-  geocode: (q: string, signal?: AbortSignal) => api.get<GeocodeResult>('geocode', { q }, signal),
+  locate: (settlementId: number, street: string) => api.get<ListingLocation>('geocode', { settlementId, street }),
 }

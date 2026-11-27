@@ -15,6 +15,7 @@ export const validation = {
   descriptionMax: 'Опис має містити не більше 4000 символів',
   deliveryNoteMax: 'Не більше 500 символів',
   addressMax: 'Адреса має містити не більше 300 символів',
+  postalCode: 'Поштовий індекс має складатися з 5 цифр',
   price: 'Вкажіть ціну більшу за нуль (до двох знаків після коми)',
   wholeNumber: (min: number, max: number) => `Ціле число від ${min} до ${max}`,
   maxDaysBelowMin: 'Максимум не може бути меншим за мінімум',

@@ -13,16 +13,18 @@ export interface ListingPayload {
   pickupAvailable: boolean
   deliveryAvailable: boolean
   deliveryNote: string | null
+  settlementId: number
   address: string
-  city: string
+  postalCode: string | null
   lat: number
   lon: number
 }
 
-export interface GeocodeResult {
+/** FR-4 (D-48): the pin and suggested postal code; exact=false means the settlement centre (street not found). */
+export interface ListingLocation {
   lat: number
   lon: number
   displayName: string
-  /** City, town or village from the geocoder; null when it has none. */
-  city: string | null
+  postalCode: string | null
+  exact: boolean
 }

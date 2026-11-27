@@ -1,3 +1,4 @@
+import { address } from '@/i18n/uk/address'
 import { admin } from '@/i18n/uk/admin'
 import { adminCatalog } from '@/i18n/uk/adminCatalog'
 import { auth } from '@/i18n/uk/auth'
@@ -42,6 +43,7 @@ export const uk = {
     errorNetwork: 'Немає з’єднання із сервером. Перевірте мережу та спробуйте ще раз.',
     or: 'або',
   },
+  address,
   admin,
   adminCatalog,
   auth,

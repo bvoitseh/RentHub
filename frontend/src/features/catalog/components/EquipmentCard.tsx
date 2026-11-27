@@ -31,7 +31,7 @@ export function EquipmentCard({ item, distanceText = t.distance }: EquipmentCard
           <p className="text-sm font-medium text-brand-700">{t.totalForPeriod(formatPrice(item.totalPrice))}</p>
         )}
         <p className="line-clamp-1 text-sm text-slate-600">
-          {item.distanceKm !== null ? distanceText(item.distanceKm) : item.address}
+          {item.distanceKm !== null ? distanceText(item.distanceKm) : `${item.city}, ${item.address}`}
         </p>
         <div className="mt-auto flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-600">
           <OwnerLabel ownerType={item.owner.ownerType} companyName={item.owner.companyName} />

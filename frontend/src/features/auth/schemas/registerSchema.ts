@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { PHONE_DISPLAY_PATTERN } from '@/features/auth/phone'
+import { settlementField } from '@/features/address/schema'
 import { uk } from '@/i18n/uk'
 
 const v = uk.validation
@@ -13,7 +14,7 @@ export const registerSchema = z
     phone: z.string().regex(PHONE_DISPLAY_PATTERN, { error: v.phone }),
     password: z.string().min(8, { error: v.passwordMin }).max(72, { error: v.passwordMax }),
     passwordConfirm: z.string(),
-    city: z.string().trim().min(1, { error: v.required }).max(100, { error: v.cityMax }),
+    settlement: settlementField,
     ownerType: z.enum(['PRIVATE', 'COMPANY']),
     companyName: z.string().trim().max(200),
     edrpou: z.string().trim(),
@@ -33,7 +34,7 @@ export const registerDefaults: RegisterInput = {
   phone: '',
   password: '',
   passwordConfirm: '',
-  city: 'Львів',
+  settlement: null,
   ownerType: 'PRIVATE',
   companyName: '',
   edrpou: '',
