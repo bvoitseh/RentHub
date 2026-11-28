@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router'
-import { Button } from '@/components/ui/Button'
+import { IconButton } from '@/components/ui/IconButton'
 import { useLogout } from '@/features/auth/hooks/useAuthMutations'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { uk } from '@/i18n/uk'
@@ -37,13 +37,25 @@ export function UserMenu() {
       <NavLink to="/profile" className={linkClass} title={t.profile}>
         {user.name}
       </NavLink>
-      <Button
-        variant="danger-soft"
-        loading={logout.isPending}
+      <IconButton
+        label={t.logout}
+        tone="danger"
+        disabled={logout.isPending}
         onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
       >
-        {t.logout}
-      </Button>
+        <svg
+          className="h-5 w-5"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+        </svg>
+      </IconButton>
     </div>
   )
 }
