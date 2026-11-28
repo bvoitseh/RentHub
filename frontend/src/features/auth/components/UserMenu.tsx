@@ -38,7 +38,7 @@ export function UserMenu() {
         {user.name}
       </NavLink>
       <Button
-        variant="ghost"
+        variant="danger"
         loading={logout.isPending}
         onClick={() => logout.mutate(undefined, { onSettled: () => navigate('/', { replace: true }) })}
       >
