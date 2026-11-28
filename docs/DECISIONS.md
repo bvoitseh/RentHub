@@ -561,3 +561,44 @@ expects the address to follow the pin. **Decision:**
   Keys whose defaults differ inside the production containers (`S3_ENDPOINT`, `REDIS_HOST`) stay commented so the
   compose defaults apply there. The local file keeps the former production test values in a commented "Production"
   block. No `.env.example` is committed: the README lists every key.
+
+## D-57 Chat between users (2026-11-28)
+
+- **Concerns:** NFR-12 ("no chat in the MVP") — overridden by the author's request; FR-3b, FR-20, NFR-4, NFR-5, NFR-6.
+  `SPECIFICATION.md` is unchanged.
+- **Author's decisions:** one conversation per pair of users (opened from a profile or a booking; a booking only adds
+  context above the thread, it is not stored); live delivery over WebSocket with STOMP (`spring-boot-starter-websocket`,
+  `@stomp/stompjs` 7.5.0, both Apache-2.0); an in-app unread badge plus an e-mail; file allow-list up to 20 MB.
+- **Rules:** a user writes only with an active account and a verified e-mail, to another active user (not the admin,
+  not oneself); both sides read the history even after one is blocked. Messages are text (≤ 4000 characters), a file
+  (images, PDF, Office/OpenDocument, TXT, ZIP; ≤ 20 MB), a voice message (WebM/Ogg/MP4 audio recorded in the browser,
+  ≤ 10 MB, the recorder stops at 5 min) or a video (MP4/WebM ≤ 50 MB). Types are recognised by leading bytes;
+  ZIP- and OLE-based Office files by extension among their family; TXT without NUL bytes. Messages are never edited or
+  deleted (YAGNI).
+- **Privacy:** attachments live in a separate bucket without anonymous read (`S3_CHAT_BUCKET`; SeaweedFS anonymous
+  read is now limited to the photos bucket) and are streamed by the backend to participants only, with HTTP Range
+  support. The admin has no access to chats.
+- **E-mail:** a minute job e-mails a side once about messages unread for longer than `CHAT_NOTIFY_AFTER` (5 min); the
+  next e-mail only after that side has read up to the e-mailed message.
+- **Push:** STOMP over a plain WebSocket at `/ws`; the handshake needs the logged-in session and the SPA's origin
+  (`APP_BASE_URL`); clients may only subscribe to their own `/user/queue/**` and never send over the socket (sending
+  is REST). In-memory simple broker (single instance). Nginx proxies `/ws` with the Upgrade headers, and the
+  Permissions-Policy now allows camera and microphone for the site itself (they were blocked).
+- **Side effect:** the broker registers its own executors and scheduler, so `AsyncConfig` now declares the `@Async`
+  executor and the `@Scheduled` scheduler explicitly from Spring Boot's builders (`spring.task.*` keeps applying).
+
+## D-58 Online status, last seen and typing in the chat (2026-11-28)
+
+- **Concerns:** D-57, NFR-5 (collect only name, e-mail, phone, city), NFR-6.
+- **Author's decisions:** presence is kept **in memory only** (nothing about activity is stored; a restart forgets
+  last-seen times, which then show as «не в мережі»); chat partners see it, and a profile switch «Показувати, коли я в
+  мережі» (`users.show_online_status`, migration V17, on by default) hides the user's status — and, in return, others'
+  status from them. The switch is the only stored value: a preference, not activity data, so NFR-5 is unaffected.
+- **Online:** a user is online while at least one STOMP session of theirs is open (`PresenceService`, fed by
+  `SessionConnectedEvent` / `SessionDisconnectEvent`); when the last one closes, that moment is the last-seen time.
+  Going online/offline or changing the switch pushes `/user/queue/presence` to every user with a conversation with
+  them. `ChatPartyResponse.online` / `lastSeenAt` are null when either side hides it. Not shown on public profiles.
+- **Typing:** the client sends STOMP `/app/chat/{id}/typing` at most every 2 s while the text box is not empty; the
+  server checks that the sender takes part and may write, and forwards it to the other participant only
+  (`/user/queue/typing`, nothing stored). «друкує…» disappears 4 s after the last signal or when a message arrives.
+  This is the only destination a client may send to over the socket. Typing is not affected by the switch.

@@ -58,11 +58,12 @@ precedence. Keys it may contain:
 | SMTP | `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_AUTH`, `SMTP_STARTTLS` |
 | admin account (FR-2a) | `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `ADMIN_NAME` (optional) |
 | rate limits (NFR-14) | `RATE_LIMIT_LOGIN`, `RATE_LIMIT_REGISTRATION`, `RATE_LIMIT_PASSWORD_RESET`, `RATE_LIMIT_RESEND_VERIFICATION` |
-| object storage (FR-4a) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` (defaults match docker-compose and `infra/seaweedfs/s3.json`) |
+| object storage (FR-4a) | `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PUBLIC_URL` (defaults match docker-compose and `infra/seaweedfs/s3.json`), `S3_CHAT_BUCKET` (private bucket for chat files, default `renthub-chat`; D-57) |
 | geocoding (FR-4) | `NOMINATIM_URL`, `NOMINATIM_USER_AGENT` (Nominatim's policy requires an identifying User-Agent with contact info) |
 | recommendations (FR-16, FR-17) | `START_CITY`, `START_CITY_LAT`, `START_CITY_LON` (Lviv), `RECOMMENDATION_RADIUS_KM` (25), `RECOMMENDATION_LIMIT` (12) |
 | reviews (FR-18) | `REVIEW_WINDOW` (default 14d after completion), `REVIEW_REPLY_WINDOW` (14d after publication) |
 | e-mail retries (FR-15a) | `MAIL_RETRY_ATTEMPTS` (default 3; pauses 10 s and 60 s are set in `application.yml`) |
+| chat (D-57) | `CHAT_NOTIFY_AFTER` (default 5m: how long a message stays unread before its recipient gets one e-mail) |
 | booking (FR-10, FR-15b) | `BOOKING_MIN_LEAD_DAYS` (default 1 = from tomorrow), `BOOKING_HORIZON_DAYS` (365), `BOOKING_REQUEST_TTL` (48h) |
 | map tiles (frontend) | `VITE_MAP_TILE_URL` in `frontend/.env.local`, optional; OpenStreetMap tiles by default |
 
@@ -74,6 +75,15 @@ The only preset account is the administrator: it is created at start-up from `AD
 `.env` (`ADMIN_NAME` is optional, default «Адміністратор») when no administrator exists yet. There is only ever one:
 later starts skip creation, and registration never creates an admin. Everyone else registers through the UI as a
 user who can both rent and rent out (account type «Приватна особа» by default, «Компанія» optional).
+
+### Chat (D-57)
+
+Users chat from a public profile or a booking («Написати»), the «Повідомлення» page lists the conversations. Messages
+arrive live over WebSocket (STOMP at `/ws`; Vite proxies it in dev). Attachments go to the private bucket
+`renthub-chat`, which `s3-init` creates; anonymous read is limited to the photos bucket (`infra/seaweedfs/s3.json`).
+After pulling this change, restart the storage once so both apply: `docker compose restart s3`, then
+`docker compose up -d --force-recreate s3-init`. Voice messages need microphone access in the browser (HTTPS or
+localhost).
 
 ### Demo data (optional)
 

@@ -5,6 +5,7 @@ import com.bohakka.renthub.dto.ProfileUpdateRequest;
 import com.bohakka.renthub.entity.Booking;
 import com.bohakka.renthub.entity.BookingStatus;
 import com.bohakka.renthub.entity.User;
+import com.bohakka.renthub.event.PresenceChanged;
 import com.bohakka.renthub.exception.ConflictException;
 import com.bohakka.renthub.exception.ForbiddenException;
 import com.bohakka.renthub.exception.NotFoundException;
@@ -19,6 +20,7 @@ import java.time.Clock;
 import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +36,7 @@ public class AccountServiceImpl implements AccountService {
 	private final SessionTerminator sessionTerminator;
 	private final SessionEstablisher sessions;
 	private final AddressService addresses;
+	private final ApplicationEventPublisher events;
 	private final Clock clock;
 
 	@Override
@@ -58,6 +61,15 @@ public class AccountServiceImpl implements AccountService {
 	public User setGeoConsent(Long userId, boolean consent) {
 		User user = get(userId);
 		user.setGeoConsent(consent);
+		return user;
+	}
+
+	@Override
+	@Transactional
+	public User setShowOnlineStatus(Long userId, boolean show) {
+		User user = get(userId);
+		user.setShowOnlineStatus(show);
+		events.publishEvent(new PresenceChanged(userId));
 		return user;
 	}
 

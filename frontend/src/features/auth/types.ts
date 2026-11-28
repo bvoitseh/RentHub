@@ -16,6 +16,8 @@ export interface User {
   /** Region + settlement (D-48); null only for the admin. */
   settlement: Settlement | null
   geoConsent: boolean
+  /** D-58: chat partners see when the user is online. */
+  showOnlineStatus: boolean
   /** Account type; null only for the admin. */
   ownerType: OwnerType | null
   companyName: string | null

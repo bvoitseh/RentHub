@@ -1,5 +1,6 @@
 import { DeactivateAccountCard } from '@/features/auth/components/DeactivateAccountCard'
 import { GeoConsentCard } from '@/features/auth/components/GeoConsentCard'
+import { OnlineStatusCard } from '@/features/chat/components/OnlineStatusCard'
 import { ProfileForm } from '@/features/auth/components/ProfileForm'
 import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser'
 import { uk } from '@/i18n/uk'
@@ -17,6 +18,7 @@ export function ProfilePage() {
         <ProfileForm user={user} />
       </section>
       <GeoConsentCard user={user} />
+      {user.role === 'USER' && <OnlineStatusCard user={user} />}
       <DeactivateAccountCard />
     </div>
   )

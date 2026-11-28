@@ -15,6 +15,8 @@ export default defineConfig({
       // Same-origin API in dev: the SPA talks to /api and Vite forwards it to Spring Boot.
       '/api': { target: 'http://localhost:8080', changeOrigin: false },
       '/actuator': { target: 'http://localhost:8080', changeOrigin: false },
+      // Chat push (D-57): STOMP over WebSocket.
+      '/ws': { target: 'ws://localhost:8080', ws: true, changeOrigin: false },
     },
   },
 })

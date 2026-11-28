@@ -63,6 +63,10 @@ public class User {
 	@Column(name = "geo_consent", nullable = false)
 	private boolean geoConsent;
 
+	/** D-58: whether chat partners see when this user is online; off also hides others' status from them. */
+	@Column(name = "show_online_status", nullable = false)
+	private boolean showOnlineStatus = true;
+
 	@Column(nullable = false)
 	private boolean blocked;
 
@@ -143,6 +147,10 @@ public class User {
 
 	public void setGeoConsent(boolean consent) {
 		this.geoConsent = consent;
+	}
+
+	public void setShowOnlineStatus(boolean show) {
+		this.showOnlineStatus = show;
 	}
 
 	/** FR-3c: the account is kept, listings are hidden by the catalogue, no e-mails are sent. */

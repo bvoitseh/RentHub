@@ -2,6 +2,7 @@ import { useParams } from 'react-router'
 import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/Spinner'
 import { PublicProfileCard } from '@/features/catalog/components/PublicProfileCard'
+import { ChatButton } from '@/features/chat/components/ChatButton'
 import { usePublicProfile } from '@/features/catalog/hooks/useCatalogQueries'
 import { UserReviews } from '@/features/reviews/components/UserReviews'
 
@@ -15,6 +16,7 @@ export function PublicProfilePage() {
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
       <PublicProfileCard profile={data} />
+      {!data.deactivated && <ChatButton userId={data.id} variant="primary" />}
       <UserReviews userId={data.id} />
     </div>
   )

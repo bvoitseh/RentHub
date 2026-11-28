@@ -21,6 +21,7 @@ export function SideNav({ onNavigate }: { onNavigate?: () => void }) {
             <NavLink to={item.to} end={item.end} className={linkClass} onClick={onNavigate}>
               {item.icon}
               {item.label}
+              {item.badge && <item.badge />}
             </NavLink>
           </li>
         ))}

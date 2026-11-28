@@ -15,13 +15,15 @@ public record UserResponse(
 		String city,
 		SettlementResponse settlement,
 		boolean geoConsent,
+		boolean showOnlineStatus,
 		OwnerType ownerType,
 		String companyName,
 		String edrpou) {
 
 	public static UserResponse from(User user) {
 		return new UserResponse(user.getId(), user.getName(), user.getEmail(), user.isEmailVerified(), user.getPhone(),
-			user.getRole(), user.getCity(), SettlementResponse.from(user.getSettlement()), user.isGeoConsent(), user.getOwnerType(), user.getCompanyName(),
+			user.getRole(), user.getCity(), SettlementResponse.from(user.getSettlement()), user.isGeoConsent(), user.isShowOnlineStatus(),
+			user.getOwnerType(), user.getCompanyName(),
 			user.getEdrpou());
 	}
 }

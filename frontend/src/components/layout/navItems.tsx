@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import type { ComponentType, ReactNode } from 'react'
+import { ChatUnreadBadge } from '@/features/chat/components/ChatUnreadBadge'
 import type { Role } from '@/features/auth/types'
 import { uk } from '@/i18n/uk'
 
@@ -9,6 +10,8 @@ export interface NavItem {
   /** Only these roles see the item; absent = everyone, guests included. */
   roles?: Role[]
   icon: ReactNode
+  /** Rendered after the label, e.g. an unread counter. */
+  badge?: ComponentType
 }
 
 const icon = (d: string) => (
@@ -47,6 +50,13 @@ export const navItems: NavItem[] = [
     label: uk.booking.nav.incoming,
     roles: ['USER'],
     icon: icon('M4 4h16v12H8l-4 4zM8 9h8M8 12h5'),
+  },
+  {
+    to: '/messages',
+    label: uk.chat.nav,
+    roles: ['USER'],
+    icon: icon('M4 5h16v11H9l-5 4zM8 9h8M8 12h6'),
+    badge: ChatUnreadBadge,
   },
   { to: '/admin', label: uk.admin.nav, roles: ['ADMIN'], icon: icon('M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z') },
 ]

@@ -69,6 +69,7 @@ services:
     environment:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY}
       S3_SECRET_KEY: ${S3_SECRET_KEY}
+      S3_BUCKET: ${S3_BUCKET:-renthub-photos}
     volumes:
       - s3-data:/data
       - ./infra/seaweedfs/prod-entrypoint.sh:/prod-entrypoint.sh:ro
@@ -80,6 +81,7 @@ services:
       - s3
     environment:
       S3_BUCKET: ${S3_BUCKET:-renthub-photos}
+      S3_CHAT_BUCKET: ${S3_CHAT_BUCKET:-renthub-chat}
     volumes:
       - ./infra/seaweedfs/create-bucket.sh:/create-bucket.sh:ro
     entrypoint: ["/bin/sh", "/create-bucket.sh"]

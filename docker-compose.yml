@@ -54,6 +54,7 @@ services:
       - s3
     environment:
       S3_BUCKET: ${S3_BUCKET:-renthub-photos}
+      S3_CHAT_BUCKET: ${S3_CHAT_BUCKET:-renthub-chat}
     volumes:
       - ./infra/seaweedfs/create-bucket.sh:/create-bucket.sh:ro
       - ./infra/seed/photos:/seed-photos:ro

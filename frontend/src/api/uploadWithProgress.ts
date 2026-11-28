@@ -14,7 +14,12 @@ function parse(text: string): unknown {
   }
 }
 
-export function uploadWithProgress<T>(path: string, file: File, onProgress: (percent: number) => void): Promise<T> {
+export function uploadWithProgress<T>(
+  path: string,
+  file: File,
+  onProgress: (percent: number) => void,
+  fields: Record<string, string> = {},
+): Promise<T> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest()
     xhr.open('POST', `${API_BASE}/${path}`)
@@ -36,6 +41,7 @@ export function uploadWithProgress<T>(path: string, file: File, onProgress: (per
       }
     }
     const form = new FormData()
+    for (const [name, value] of Object.entries(fields)) form.append(name, value)
     form.append('file', file)
     xhr.send(form)
   })
