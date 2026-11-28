@@ -12,7 +12,7 @@ export function MessageBubble({ message, own }: { message: ChatMessage; own: boo
         }`}
       >
         {message.body && <p className="whitespace-pre-wrap break-words">{message.body}</p>}
-        <AttachmentView message={message} />
+        <AttachmentView message={message} own={own} />
         <time dateTime={message.createdAt} className="self-end text-xs opacity-75">
           {formatMessageTime(message.createdAt)}
         </time>

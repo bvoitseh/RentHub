@@ -1,16 +1,17 @@
+import { VoicePlayer } from '@/features/chat/components/VoicePlayer'
 import { formatSize } from '@/features/chat/format'
 import type { ChatMessage } from '@/features/chat/types'
 import { uk } from '@/i18n/uk'
 
 const t = uk.chat
 
-/** An attachment in a bubble: inline image, audio player, video player, or a download link for other files. */
-export function AttachmentView({ message }: { message: ChatMessage }) {
+/** An attachment in a bubble: inline image, voice player with waveform, video player, or a download link. */
+export function AttachmentView({ message, own }: { message: ChatMessage; own: boolean }) {
   const file = message.attachment
   if (!file) return null
 
   if (message.kind === 'VOICE') {
-    return <audio controls preload="metadata" src={file.url} className="w-64 max-w-full" aria-label={t.kinds.VOICE} />
+    return <VoicePlayer file={file} own={own} />
   }
   if (message.kind === 'VIDEO') {
     return (
