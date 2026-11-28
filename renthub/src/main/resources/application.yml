@@ -116,6 +116,8 @@ app:
     secret-key: ${S3_SECRET_KEY:renthub-local-secret}
     # Base URL under which stored objects are publicly readable (the bucket allows anonymous download).
     public-url: ${S3_PUBLIC_URL:http://localhost:8333/renthub-photos}
+    # D-57: chat attachments, a separate bucket without anonymous read; files are streamed by the backend.
+    chat-bucket: ${S3_CHAT_BUCKET:renthub-chat}
   # FR-4, NFR-13: OpenStreetMap Nominatim; its policy requires an identifying User-Agent and <= 1 request/second.
   geocoding:
     url: ${NOMINATIM_URL:https://nominatim.openstreetmap.org}
@@ -140,6 +142,10 @@ app:
     window: ${REVIEW_WINDOW:14d}
     reply-window: ${REVIEW_REPLY_WINDOW:14d}
     publish-cron: "0 15 * * * *"
+  # D-57: chat; a recipient is e-mailed once about messages unread for longer than notify-after (checked every minute).
+  chat:
+    notify-after: ${CHAT_NOTIFY_AFTER:5m}
+    notify-cron: "0 * * * * *"
   # FR-15a: failed e-mails are retried in memory on the async mail thread (D-41); pauses before the 2nd and 3rd attempt.
   mail:
     retry:
