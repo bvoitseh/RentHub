@@ -5,6 +5,7 @@ import { formatPrice } from '@/features/catalog/format'
 import { BookingContact } from '@/features/booking/components/BookingContact'
 import { BookingStatusBadge } from '@/features/booking/components/BookingStatusBadge'
 import { BookingReviews } from '@/features/reviews/components/BookingReviews'
+import { ChatButton } from '@/features/chat/components/ChatButton'
 import { ComplaintButton } from '@/features/complaints/components/ComplaintButton'
 import { formatDateTime, formatPeriod } from '@/features/booking/dates'
 import type { Booking } from '@/features/booking/types'
@@ -64,6 +65,10 @@ export function BookingRow({ booking: b, party, actions }: BookingRowProps) {
           </p>
         )}
         <BookingContact booking={b} />
+        <ChatButton
+          userId={other.id}
+          booking={{ title: b.equipment.title, period: formatPeriod(b.dateFrom, b.dateTo) }}
+        />
         {b.status === 'COMPLETED' && <BookingReviews bookingId={b.id} />}
         <ComplaintButton subject={{ bookingId: b.id }} />
       </div>

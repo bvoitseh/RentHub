@@ -4,6 +4,7 @@ import { adminCatalog } from '@/i18n/uk/adminCatalog'
 import { auth } from '@/i18n/uk/auth'
 import { booking } from '@/i18n/uk/booking'
 import { catalog } from '@/i18n/uk/catalog'
+import { chat } from '@/i18n/uk/chat'
 import { complaints } from '@/i18n/uk/complaints'
 import { listings } from '@/i18n/uk/listings'
 import { media } from '@/i18n/uk/media'
@@ -58,6 +59,7 @@ export const uk = {
   auth,
   booking,
   catalog,
+  chat,
   complaints,
   listings,
   media,
