@@ -1,6 +1,7 @@
 package com.bohakka.renthub.controller;
 
 import com.bohakka.renthub.dto.GeoConsentRequest;
+import com.bohakka.renthub.dto.OnlineStatusRequest;
 import com.bohakka.renthub.dto.PasswordConfirmRequest;
 import com.bohakka.renthub.dto.ProfileUpdateRequest;
 import com.bohakka.renthub.dto.UserResponse;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** /api/v1/users/me — profile, geolocation consent, deactivation. */
+/** /api/v1/users/me — profile, geolocation consent, online-status visibility (D-58), deactivation. */
 @RestController
 @RequestMapping("/api/v1/users/me")
 @RequiredArgsConstructor
@@ -36,6 +37,12 @@ class MeController {
 	UserResponse setGeoConsent(@AuthenticationPrincipal AppUserDetails principal,
 			@Valid @RequestBody GeoConsentRequest request) {
 		return UserResponse.from(accounts.setGeoConsent(principal.getId(), request.consent()));
+	}
+
+	@PutMapping("/online-status")
+	UserResponse setShowOnlineStatus(@AuthenticationPrincipal AppUserDetails principal,
+			@Valid @RequestBody OnlineStatusRequest request) {
+		return UserResponse.from(accounts.setShowOnlineStatus(principal.getId(), request.visible()));
 	}
 
 	@PostMapping("/deactivate")

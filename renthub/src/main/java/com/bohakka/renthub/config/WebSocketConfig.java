@@ -19,7 +19,8 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 /**
  * Chat push (D-57): STOMP over a plain WebSocket at {@code /ws}. The handshake is an ordinary request behind Spring
  * Security, so only a logged-in session can open it, and only from the SPA's own origin ({@code app.base-url}).
- * Messages are sent through REST; over the socket a client may only subscribe to its own {@code /user/queue/**}.
+ * Messages are sent through REST; over the socket a client may only subscribe to its own {@code /user/queue/**}
+ * and send the typing signal (D-58).
  * The in-memory simple broker fits the single-instance deployment.
  */
 @Configuration
@@ -54,8 +55,8 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 				if (command == StompCommand.CONNECT && accessor.getUser() == null) {
 					throw new MessageDeliveryException("Not authenticated");
 				}
-				if (command == StompCommand.SEND) {
-					throw new MessageDeliveryException("Sending over the socket is not supported");
+				if (command == StompCommand.SEND && !isTypingSignal(accessor.getDestination())) {
+					throw new MessageDeliveryException("Only typing signals may be sent over the socket");
 				}
 				if (command == StompCommand.SUBSCRIBE) {
 					String destination = accessor.getDestination();
@@ -66,5 +67,10 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 				return message;
 			}
 		});
+	}
+
+	/** D-58: {@code /app/chat/{id}/typing} is the one destination a client may send to. */
+	private static boolean isTypingSignal(String destination) {
+		return destination != null && destination.matches("/app/chat/[0-9]+/typing");
 	}
 }

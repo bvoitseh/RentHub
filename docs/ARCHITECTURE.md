@@ -84,7 +84,7 @@ allow-list, VOICE ≤ 10 MB, VIDEO MP4/WebM ≤ 50 MB) are sniffed by leading by
 `S3_CHAT_BUCKET`, no anonymous read); `ChatAttachmentController` streams them to participants with Range support. After commit, `ChatPushListener`
 pushes the message over STOMP to `/user/queue/chat` of both users (`WebSocketConfig`: `/ws`, own origin, logged-in session, subscribe to
 `/user/queue/**` only, no SEND). `ChatNotificationJob` (every minute) e-mails a side once about messages unread for `app.chat.notify-after` (5 min);
-the next e-mail only after it has read up to there.
+the next e-mail only after it has read up to there. Presence (D-58): `PresenceService` (memory) + `PresencePushListener` → `/user/queue/presence`; typing: STOMP `/app/chat/{id}/typing` (`ChatTypingController`) → `/user/queue/typing`; opt-out `users.show_online_status`.
 
 **Where business rules live:** entity methods guard their own invariants; services orchestrate use cases.
 

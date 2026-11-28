@@ -26,7 +26,7 @@ export function ConversationItem({ conversation: c, userId }: { conversation: Co
   return (
     <li>
       <NavLink to={`/messages/${c.id}`} className={itemClass}>
-        <ChatAvatar id={c.other.id} name={c.other.name} />
+        <ChatAvatar id={c.other.id} name={c.other.name} online={c.other.online === true} />
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="flex items-center justify-between gap-2">
             <span className={`truncate text-slate-900 ${unread ? 'font-bold' : 'font-semibold'}`}>{c.other.name}</span>

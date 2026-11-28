@@ -25,6 +25,11 @@ public interface ConversationRepository extends JpaRepository<Conversation, Long
 	@Query("select c from Conversation c where c.id = :id")
 	Optional<Conversation> lockById(@Param("id") Long id);
 
+	/** Every conversation of the user, with both users (presence updates go to all partners, D-58). */
+	@EntityGraph(attributePaths = {"userLow", "userHigh"})
+	@Query("select c from Conversation c where c.userLow.id = :userId or c.userHigh.id = :userId")
+	List<Conversation> findAllFor(@Param("userId") Long userId);
+
 	/** The user's conversations that have at least one message, most recent first. */
 	@EntityGraph(attributePaths = {"userLow", "userHigh"})
 	@Query("""

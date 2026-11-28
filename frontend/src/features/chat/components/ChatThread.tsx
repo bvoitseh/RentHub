@@ -5,6 +5,7 @@ import { ErrorState } from '@/components/ui/ErrorState'
 import { LoadingState } from '@/components/ui/Spinner'
 import { MessageComposer } from '@/features/chat/components/MessageComposer'
 import { MessageList } from '@/features/chat/components/MessageList'
+import { PresenceLine } from '@/features/chat/components/PresenceLine'
 import { useMarkRead } from '@/features/chat/hooks/useChatMutations'
 import { useConversation } from '@/features/chat/hooks/useChatQueries'
 import type { BookingContext } from '@/features/chat/types'
@@ -48,6 +49,7 @@ export function ChatThread({ conversationId, userId, emailVerified, booking }: C
         <Link to={`/users/${other.id}`} className="text-lg font-semibold text-slate-900 hover:text-brand-700">
           {other.name}
         </Link>
+        <PresenceLine conversationId={conversationId} other={other} />
         {booking && <p className="text-sm text-slate-600">{t.aboutBooking(booking.title, booking.period)}</p>}
       </header>
       <MessageList conversationId={conversationId} userId={userId} onNewest={onNewest} />

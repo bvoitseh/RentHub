@@ -13,6 +13,9 @@ public interface AccountService {
 
 	User setGeoConsent(Long userId, boolean consent);
 
+	/** D-58: show or hide the user's online status and last-seen time in chats. */
+	User setShowOnlineStatus(Long userId, boolean show);
+
 	/** FR-3c: password confirmation, no active bookings, then every session of the user is ended. */
 	void deactivate(Long userId, String password, HttpServletRequest http);
 }

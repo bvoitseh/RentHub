@@ -4,6 +4,7 @@ import com.bohakka.renthub.dto.ConversationResponse;
 import com.bohakka.renthub.entity.ChatMessage;
 import com.bohakka.renthub.entity.Conversation;
 import com.bohakka.renthub.entity.User;
+import com.bohakka.renthub.event.TypingSignal;
 import com.bohakka.renthub.exception.BusinessRuleException;
 import com.bohakka.renthub.exception.NotFoundException;
 import com.bohakka.renthub.repository.ChatMessageRepository;
@@ -17,6 +18,7 @@ import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class ChatServiceImpl implements ChatService {
 	private final UserRepository users;
 	private final ChatAccess access;
 	private final ChatMapper mapper;
+	private final ApplicationEventPublisher events;
 	private final Clock clock;
 
 	@Override
@@ -84,6 +87,16 @@ public class ChatServiceImpl implements ChatService {
 	@Transactional(readOnly = true)
 	public long unreadTotal(Long userId) {
 		return unreadByConversation(userId).values().stream().mapToLong(Long::longValue).sum();
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public void typing(Long userId, Long conversationId) {
+		Conversation conversation = access.forParticipant(userId, conversationId);
+		User me = conversation.getUserLow().getId().equals(userId) ? conversation.getUserLow() : conversation.getUserHigh();
+		User other = conversation.other(userId);
+		access.requireMayWrite(me, other);
+		events.publishEvent(new TypingSignal(conversationId, userId, other.getEmail()));
 	}
 
 	private ConversationResponse describe(Conversation conversation, Long userId) {

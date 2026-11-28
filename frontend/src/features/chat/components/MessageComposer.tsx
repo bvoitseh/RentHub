@@ -5,6 +5,7 @@ import { IconButton } from '@/components/ui/IconButton'
 import { PaperclipIcon, SendIcon } from '@/features/chat/components/ChatIcons'
 import { VoiceRecorder } from '@/features/chat/components/VoiceRecorder'
 import { useSendAttachment, useSendText } from '@/features/chat/hooks/useChatMutations'
+import { sendTyping } from '@/features/chat/chatSocket'
 import { useVoiceRecorder } from '@/features/chat/hooks/useVoiceRecorder'
 import { uk } from '@/i18n/uk'
 
@@ -57,7 +58,10 @@ export function MessageComposer({ conversationId }: { conversationId: number }) 
             </IconButton>
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value)
+                if (e.target.value.trim()) sendTyping(conversationId)
+              }}
               onKeyDown={onKeyDown}
               rows={2}
               maxLength={MAX_LENGTH}

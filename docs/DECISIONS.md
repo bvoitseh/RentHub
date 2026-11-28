@@ -586,3 +586,19 @@ expects the address to follow the pin. **Decision:**
   Permissions-Policy now allows camera and microphone for the site itself (they were blocked).
 - **Side effect:** the broker registers its own executors and scheduler, so `AsyncConfig` now declares the `@Async`
   executor and the `@Scheduled` scheduler explicitly from Spring Boot's builders (`spring.task.*` keeps applying).
+
+## D-58 Online status, last seen and typing in the chat (2026-11-28)
+
+- **Concerns:** D-57, NFR-5 (collect only name, e-mail, phone, city), NFR-6.
+- **Author's decisions:** presence is kept **in memory only** (nothing about activity is stored; a restart forgets
+  last-seen times, which then show as «не в мережі»); chat partners see it, and a profile switch «Показувати, коли я в
+  мережі» (`users.show_online_status`, migration V17, on by default) hides the user's status — and, in return, others'
+  status from them. The switch is the only stored value: a preference, not activity data, so NFR-5 is unaffected.
+- **Online:** a user is online while at least one STOMP session of theirs is open (`PresenceService`, fed by
+  `SessionConnectedEvent` / `SessionDisconnectEvent`); when the last one closes, that moment is the last-seen time.
+  Going online/offline or changing the switch pushes `/user/queue/presence` to every user with a conversation with
+  them. `ChatPartyResponse.online` / `lastSeenAt` are null when either side hides it. Not shown on public profiles.
+- **Typing:** the client sends STOMP `/app/chat/{id}/typing` at most every 2 s while the text box is not empty; the
+  server checks that the sender takes part and may write, and forwards it to the other participant only
+  (`/user/queue/typing`, nothing stored). «друкує…» disappears 4 s after the last signal or when a message arrives.
+  This is the only destination a client may send to over the socket. Typing is not affected by the switch.

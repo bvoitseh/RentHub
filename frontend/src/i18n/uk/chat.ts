@@ -33,6 +33,23 @@ export const chat = {
     VIDEO: 'Відео',
   },
   download: 'Завантажити',
+  presence: {
+    online: 'у мережі',
+    offline: 'не в мережі',
+    typing: 'друкує…',
+    lastSeen: (when: string) => `був(-ла) у мережі ${when}`,
+    justNow: 'щойно',
+    today: (time: string) => `сьогодні о ${time}`,
+    yesterday: (time: string) => `вчора о ${time}`,
+    onDay: (day: string, time: string) => `${day} о ${time}`,
+  },
+  status: {
+    title: 'Статус у мережі',
+    text: 'Співрозмовники бачать, коли ви в мережі та коли були востаннє. Якщо вимкнути, ви також не бачитимете цього про інших.',
+    label: 'Показувати, коли я в мережі',
+    shown: 'Ваш статус у мережі видно співрозмовникам.',
+    hidden: 'Ваш статус у мережі приховано.',
+  },
   voice: {
     play: 'Відтворити голосове повідомлення',
     pause: 'Пауза',

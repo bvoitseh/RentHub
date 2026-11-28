@@ -20,3 +20,22 @@ export function formatSize(bytes: number) {
   if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} КБ`
   return `${(bytes / (1024 * 1024)).toLocaleString('uk-UA', { maximumFractionDigits: 1 })} МБ`
 }
+
+export interface LastSeenLabels {
+  justNow: string
+  today: (time: string) => string
+  yesterday: (time: string) => string
+  onDay: (day: string, time: string) => string
+}
+
+/** «щойно» / «сьогодні о 14:05» / «вчора о 09:10» / «3 груд. о 18:20» for the last-seen line (D-58). */
+export function formatLastSeen(instant: string, labels: LastSeenLabels) {
+  const date = new Date(instant)
+  if (Date.now() - date.getTime() < 60_000) return labels.justNow
+  const time = timeFormat.format(date)
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  if (date.toDateString() === new Date().toDateString()) return labels.today(time)
+  if (date.toDateString() === yesterday.toDateString()) return labels.yesterday(time)
+  return labels.onDay(dayFormat.format(date), time)
+}

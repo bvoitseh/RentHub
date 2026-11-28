@@ -25,6 +25,17 @@ export interface ChatParty {
   name: string
   /** False when the user is blocked or deactivated: they cannot receive messages. */
   available: boolean
+  /** D-58: null when either side hides their online status. */
+  online: boolean | null
+  /** When they were last online; null when hidden, online now or unknown (kept in memory only). */
+  lastSeenAt: string | null
+}
+
+/** A partner's status pushed over the socket (D-58). */
+export interface Presence {
+  userId: number
+  online: boolean | null
+  lastSeenAt: string | null
 }
 
 export interface Conversation {
