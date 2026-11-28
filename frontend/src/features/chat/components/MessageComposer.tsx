@@ -1,9 +1,8 @@
 import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
 import { problemMessage } from '@/api/problem'
 import { Alert } from '@/components/ui/Alert'
-import { Button } from '@/components/ui/Button'
 import { IconButton } from '@/components/ui/IconButton'
-import { PaperclipIcon } from '@/features/chat/components/ChatIcons'
+import { PaperclipIcon, SendIcon } from '@/features/chat/components/ChatIcons'
 import { VoiceRecorder } from '@/features/chat/components/VoiceRecorder'
 import { useSendAttachment, useSendText } from '@/features/chat/hooks/useChatMutations'
 import { useVoiceRecorder } from '@/features/chat/hooks/useVoiceRecorder'
@@ -70,9 +69,9 @@ export function MessageComposer({ conversationId }: { conversationId: number }) 
         )}
         <VoiceRecorder voice={voice} disabled={busy} onRecorded={sendVoice} />
         {!voice.recording && (
-          <Button type="submit" loading={sendText.isPending} disabled={!text.trim() || sendFile.isPending}>
-            {t.send}
-          </Button>
+          <IconButton type="submit" label={t.send} tone="primary" disabled={!text.trim() || busy}>
+            <SendIcon />
+          </IconButton>
         )}
       </div>
       {voice.error && <p className="text-xs text-red-700">{micErrors[voice.error]}</p>}
