@@ -9,7 +9,7 @@ const TYPES: [string, string][] = [
   ['audio/mp4', 'm4a'],
 ]
 
-export type RecorderError = 'denied' | 'unsupported' | null
+export type RecorderError = 'denied' | 'notFound' | 'unsupported' | null
 
 /**
  * Records a voice message with the browser's MediaRecorder (no library). `stop()` resolves with the file, `cancel()`
@@ -37,8 +37,8 @@ export function useVoiceRecorder(onLimit: (file: File) => void) {
     let stream: MediaStream
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-    } catch {
-      setError('denied')
+    } catch (cause) {
+      setError(cause instanceof DOMException && cause.name === 'NotFoundError' ? 'notFound' : 'denied')
       return
     }
     const [type, extension] = supported
