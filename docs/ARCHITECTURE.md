@@ -1,7 +1,7 @@
 # RentHub — Architecture
 
-Map of the codebase. Keep it concise and accurate; update it in every feature branch that changes any of this.
-Requirements live in `SPECIFICATION.md`, engineering rules in `CLAUDE.md`, recorded assumptions in `DECISIONS.md`.
+Map of the codebase. Keep it concise and accurate; update it in every feature branch that changes any of this. Requirements live in
+`SPECIFICATION.md`, engineering rules in `CLAUDE.md`, recorded assumptions in `DECISIONS.md`.
 
 ## 1. Repository layout
 
@@ -10,136 +10,133 @@ renthub/
 ├─ renthub/     backend — Spring Boot 4.1 (Gradle), Java 25, package com.bohakka.renthub; Dockerfile (JRE, non-root)
 ├─ frontend/    SPA — React 19 + TypeScript + Vite 8, Tailwind CSS 4; Dockerfile (Node build → Nginx)
 ├─ docs/        SPECIFICATION.md · ARCHITECTURE.md · DECISIONS.md
-├─ docker-compose.yml       local: redis · s3 + s3-init; *.prod.yml: Nginx · backend · redis · s3, external PostgreSQL (D-47)
+├─ docker-compose.yml       local: postgres · redis · s3 + s3-init; *.prod.yml: Nginx · backend · redis · s3 (D-47)
 ├─ infra/       seaweedfs/ (S3, prod entrypoint) · nginx/ · backup/backup.sh · seed/ (D-36) · osm/ (settlements, D-48)
 └─ .env                 the single environment file per machine (git-ignored, D-55); keys listed in the README
 ```
 
 ## 2. Backend
 
-**Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail,
-Scheduling + `@Async`, Actuator, Flyway, Spring Data Redis, AWS SDK v2 (S3), Lombok. PostgreSQL only (D-54): docker-compose
-locally, the production server via `DB_URL` (D-47); one configuration without Spring profiles (D-17). No backend tests.
+**Stack:** Spring Web MVC, Spring Data JPA (Hibernate 7), Spring Security 7, Bean Validation, Spring Mail, Scheduling + `@Async`, Actuator, Flyway,
+Spring Data Redis, AWS SDK v2 (S3), Lombok. PostgreSQL only (D-54): docker-compose locally, the production server via `DB_URL` (D-47); one
+configuration without Spring profiles (D-17). No backend tests.
 
-**Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer.
-New features add classes to these packages; a new package is created only for a genuinely new kind of class.
+**Package-by-layer** under `com.bohakka.renthub` (D-22): one monolith, one flat package per technical layer. New features add classes to these
+packages; a new package is created only for a genuinely new kind of class.
 
 | Package | Contents |
 |---|---|
-| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events for index clean-up on expiry), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a), `S3Config` (S3 client), `GeocodingConfig` (Nominatim `RestClient`); `AsyncConfig` also enables scheduling |
-| `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`), `StorageProperties` (`app.storage.*`), `GeocodingProperties` (`app.geocoding.*`), `BookingProperties` (`app.booking.*`) |
-| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`), `AddressController` (`/regions`, `/settlements`) |
+| `config` | `@Configuration` classes only: `SecurityConfig` (session + CSRF + BCrypt + method security), `TimeConfig` (`Clock`, Europe/Kyiv), `AsyncConfig`, `RedisConfig` (Redis repositories + keyspace events for index clean-up on expiry), `AdminAccountConfig` (start-up runner presetting the single admin, FR-2a), `S3Config` (S3 client), `GeocodingConfig` (Nominatim `RestClient`), `WebSocketConfig` (STOMP `/ws`, D-57); `AsyncConfig` enables async + scheduling with explicit pools |
+| `properties` | `@ConfigurationProperties` records: `AppProperties` (`app.*`), `RateLimitProperties` (`app.rate-limit.*`), `AdminBootstrapProperties` (`app.admin.*`), `StorageProperties` (`app.storage.*`), `GeocodingProperties` (`app.geocoding.*`), `BookingProperties` (`app.booking.*`), `ChatProperties` (`app.chat.*`) |
+| `controller` | REST controllers: `AuthController` (`/api/v1/auth`), `MeController` (`/api/v1/users/me`), `UserProfileController` (`/api/v1/users/{id}`), `CategoryController`, `EquipmentController` (`/api/v1/equipment`, incl. `/my`), `EquipmentPhotoController`, `GeocodeController`, `AvailabilityController` (`/equipment/{id}/availability`, `/blocks`), `BookingController` (`/api/v1/bookings`), `AddressController` (`/regions`, `/settlements`), `ChatController` + `ChatAttachmentController` (`/api/v1/chats`) |
 | `dto` | request/response records (`RegisterRequest`, `UserResponse`, `EquipmentRequest`, `CatalogQuery`, `EquipmentSummaryResponse`, `EquipmentDetailsResponse`, `PageResponse`, `PublicProfileResponse`, `BookingRequest`, `BookingResponse`, `AvailabilityResponse`, `BookingRef`, `ContactResponse`, …), shared `Validation` constants, `EmailMessage` |
-| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), `Complaint` (+ `ComplaintStatus`, FR-21), `Region` + `Settlement` (immutable reference data, D-48), value types `ListingAddress`, `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
-| `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
-| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `ComplaintService`, `ModerationService`, `CategoryAdminService`, `CommissionService`, `StatisticsService`, `AddressService`, `ListingLocationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `BookingLifecycleJobs`, `ReviewPublicationJob` (schedulers) |
-| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `NominatimGeocoder`; helpers `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
+| `entity` | JPA: `User` (+ `Role` = `USER`/`ADMIN`, `OwnerType` = account type), `Category`, `Equipment` (aggregate owning its `EquipmentPhoto`s, + `EquipmentStatus`, `ItemCondition`), `Booking` (+ `BookingStatus` with the FR-14 transition table, `Handover`, `CancelledBy`), `AvailabilityBlock`, `CommissionRate` (versioned, D-37), `Review` (FR-18), `Complaint` (+ `ComplaintStatus`, FR-21), `Region` + `Settlement` (immutable reference data, D-48), `Conversation` + `ChatMessage` (+ `MessageKind`, D-57), value types `ListingAddress`, `RentalTerms`, `GeoPoint`, `BookingPeriod`, `AvailabilityCalendar` (free units per day); Redis: `EmailToken` (+ `EmailTokenType`), `RateLimitAttempts`, `RateLimitBlock`, `GeocodeCacheEntry` |
+| `repository` | Spring Data: `UserRepository`, `CategoryRepository`, `EquipmentRepository` (+ `JpaSpecificationExecutor`), `EquipmentPhotoRepository`, `BookingRepository` (+ `BookingParties` projection), `AvailabilityBlockRepository`, `CommissionRateRepository`, `ReviewRepository`, `ConversationRepository`, `ChatMessageRepository` (JPA); `EmailTokenRepository`, `RateLimitAttemptsRepository`, `RateLimitBlockRepository`, `GeocodeCacheRepository` (Redis); `EquipmentSpecifications` (catalogue filters) |
+| `service` | service interfaces, the API other beans inject: `RegistrationService`, `LoginService`, `EmailVerificationService`, `PasswordResetService`, `AccountService`, `EmailTokenService`, `RateLimiter` (NFR-14), `MailGateway`, `MailDelivery` (retries, D-41), `BookingNotifier`, `ReviewService`, `RecommendationService`, `ComplaintService`, `ModerationService`, `CategoryAdminService`, `CommissionService`, `StatisticsService`, `AddressService`, `ListingLocationService`, `CategoryService`, `CatalogService`, `ListingService`, `PhotoService`, `PublicProfileService`, `ObjectStorage`, `PrivateFileStorage`, `ChatService`, `ChatMessageService`, `Geocoder`, `AvailabilityService`, `AvailabilityBlockService`, `BookingService`, `BookingQueryService`; beans without interface: `AccountMailListener`, `StoredObjectCleanupListener`, `BookingMailListener`, `ChatPushListener`, `ChatMailListener`, `ChatAttachmentCleanupListener`, `BookingLifecycleJobs`, `ReviewPublicationJob`, `ChatNotificationJob` (schedulers) |
+| `service.impl` | the `@Service`/`@Component` implementations: `*ServiceImpl`, `RateLimiterImpl`, `EmailTokenServiceImpl`, `SmtpMailGateway`, `RetryingMailDelivery`, `BookingNotifierImpl`, `ReviewMapper`, `S3ObjectStorage`, `S3PrivateFileStorage`, `NominatimGeocoder`; helpers `ChatAccess`, `ChatMapper`, `AttachmentFormat` + `AttachmentRules` (chat files), `EquipmentMapper` (entity → DTO, photo URLs), `EquipmentAccess` (ownership / may-publish checks), `ImageFormat` (magic-byte sniffing), `CatalogSort`, `BookingMapper`, `BookingDeadline` (FR-15b deadline) |
 | `security` | Spring Security glue: `AppUserDetails`, `AppUserDetailsService`, `SessionEstablisher`, `SessionTerminator`, `SecurityProblemHandler` (401/403 → advice), `SpaCsrfTokenRequestHandler` |
 | `exception` | `DomainException` hierarchy (`NotFound` 404, `AuthenticationFailed` 401, `Forbidden` 403, `Conflict` 409, `BusinessRule` 422, `RateLimited` 429), `ApiExceptionHandler` (the only `@RestControllerAdvice`), `ProblemDetailFactory`, `ErrorCodes` |
-| `event` | application events: `VerificationEmailRequested`, `PasswordResetEmailRequested` (e-mails); `StoredObjectsRemoved`, `StoredObjectUploaded` (storage clean-up after commit / rollback); `BookingNotice` + `BookingNoticeType` (booking e-mails) |
+| `event` | application events: `VerificationEmailRequested`, `PasswordResetEmailRequested` (e-mails); `StoredObjectsRemoved`, `StoredObjectUploaded` (storage clean-up after commit / rollback); `BookingNotice` + `BookingNoticeType` (booking e-mails); `ChatMessageSent`, `ChatUnreadNotice`, `ChatAttachmentUploaded` |
 
-**Layering:** controller → service → repository. Controllers hold no business rules and never return entities;
-DTOs are Java records mapped at the API boundary. JPA: lazy fetching, `open-in-view=false`.
+**Layering:** controller → service → repository. Controllers hold no business rules and never return entities; DTOs are Java records mapped at the API
+boundary. JPA: lazy fetching, `open-in-view=false`.
 
-**Catalogue (FR-4…FR-7) in short:** `Equipment` owns its rules: `RentalTerms` validates price, quantity, min/max days
-and handover as one unit and knows which changes are frozen by active bookings (FR-5); photos are added/removed only
-through the aggregate (1-5, contiguous positions, the last one cannot be removed); `archive()` keeps a blocked listing
-blocked. `CatalogServiceImpl` composes `EquipmentSpecifications` (visible = ACTIVE + owner active + ≥ 1 photo; text,
-category, price, rental length vs min/max days, units, radius, handover, owner type) and sorts by price, newest or
-distance (portable SQL expression); cover photos of a page are loaded in one query. Photo files are sniffed by magic
-bytes (JPEG/PNG/WebP ≤ 5 MB, 1–10 per listing; one optional MP4/WebM video ≤ 50 MB streamed by `VideoServiceImpl`,
-D-52) under `equipment/{id}/{uuid}.{ext}`, removed by `StoredObjectCleanupListener` after commit (or a fresh upload's rollback). With rental dates the catalogue keeps only listings with
-the units free on every day (`hasFreeUnits`: no overlapping block, and the busiest day — the period's first day or a
-booking's first day inside it — has room) and the price range and card price refer to the total cost. FR-5 checks use
-the bookings. Profile counters: ratings (FR-19) and complaints without rejected ones (FR-21).
+**Catalogue (FR-4…FR-7) in short:** `Equipment` owns its rules: `RentalTerms` validates price, quantity, min/max days and handover as one unit and
+knows which changes are frozen by active bookings (FR-5); photos are added/removed only through the aggregate (1-5, contiguous positions, the last one
+cannot be removed); `archive()` keeps a blocked listing blocked. `CatalogServiceImpl` composes `EquipmentSpecifications` (visible = ACTIVE + owner
+active + ≥ 1 photo; text, category, price, rental length vs min/max days, units, radius, handover, owner type) and sorts by price, newest or distance
+(portable SQL expression); cover photos of a page are loaded in one query. Photo files are sniffed by magic bytes (JPEG/PNG/WebP ≤ 5 MB, 1–10 per
+listing; one optional MP4/WebM video ≤ 50 MB streamed by `VideoServiceImpl`, D-52) under `equipment/{id}/{uuid}.{ext}`, removed by
+`StoredObjectCleanupListener` after commit (or a fresh upload's rollback). With rental dates the catalogue keeps only listings with the units free on
+every day (`hasFreeUnits`: no overlapping block, and the busiest day — the period's first day or a booking's first day inside it — has room) and the
+price range and card price refer to the total cost. FR-5 checks use the bookings. Profile counters: ratings (FR-19) and complaints without rejected
+ones (FR-21).
 
-**Availability and booking (FR-8…FR-15b) in short:** `BookingStatus` is the one place listing which status may follow
-which (FR-14); `Booking`'s methods check who may act and when (owner confirms/rejects, renter or owner cancels before
-the start, the owner with a 10–500 character reason) and fix price, total and commission at creation (FR-10,
-`CommissionRate.commissionOn`, HALF_UP). `AvailabilityCalendar` computes free units per day from the NEW + CONFIRMED
-bookings (D-39) and the blocks. `BookingServiceImpl` creates and confirms inside one transaction that first takes the
-listing's pessimistic write lock (`EquipmentRepository.lockById`, `SELECT … FOR UPDATE`) and then re-checks
-availability (FR-11), so parallel requests are serialised and the excess one gets `409 booking.unavailable` with the
-days. Block creation and listing edits take the same lock; every booking status change locks the booking row, and
-locks are always taken in the order listing → users → booking (D-40). Every status change (and each request the job
-expires) calls `BookingNotifier`, which publishes a `BookingNotice` snapshot; `BookingMailListener` sends the
-Ukrainian e-mail after the commit, off the request thread, through `MailDelivery` (3 attempts, 10 s / 60 s, D-41). `BookingQueryServiceImpl` serves the lists and the FR-3b contact rule.
+**Availability and booking (FR-8…FR-15b) in short:** `BookingStatus` is the one place listing which status may follow which (FR-14); `Booking`'s
+methods check who may act and when (owner confirms/rejects, renter or owner cancels before the start, the owner with a 10–500 character reason) and
+fix price, total and commission at creation (FR-10, `CommissionRate.commissionOn`, HALF_UP). `AvailabilityCalendar` computes free units per day from
+the NEW + CONFIRMED bookings (D-39) and the blocks. `BookingServiceImpl` creates and confirms inside one transaction that first takes the listing's
+pessimistic write lock (`EquipmentRepository.lockById`, `SELECT … FOR UPDATE`) and then re-checks availability (FR-11), so parallel requests are
+serialised and the excess one gets `409 booking.unavailable` with the days. Block creation and listing edits take the same lock; every booking status
+change locks the booking row, and locks are always taken in the order listing → users → booking (D-40). Every status change (and each request the job
+expires) calls `BookingNotifier`, which publishes a `BookingNotice` snapshot; `BookingMailListener` sends the Ukrainian e-mail after the commit, off
+the request thread, through `MailDelivery` (3 attempts, 10 s / 60 s, D-41). `BookingQueryServiceImpl` serves the lists and the FR-3b contact rule.
 
-**Reviews (FR-18, FR-19) in short:** `Review` owns the blind rule (`isVisibleTo`), publication (adds the rating to
-the target: `User.addPublishedRating` keeps sum, count and average) and the one-reply rule with its window.
-`ReviewServiceImpl` accepts a review only from a side of a COMPLETED booking within the window; it locks both
-users, then the booking (D-40 order), and publishes both reviews when the second arrives. `ReviewPublicationJob`
-publishes lone reviews after the window. Ratings travel on `OwnerBadge`, booking parties and the public profile;
-the catalogue `rating` sort is `EquipmentSpecifications.bestRatedFirst`.
+**Reviews (FR-18, FR-19) in short:** `Review` owns the blind rule (`isVisibleTo`), publication (adds the rating to the target:
+`User.addPublishedRating` keeps sum, count and average) and the one-reply rule with its window. `ReviewServiceImpl` accepts a review only from a side
+of a COMPLETED booking within the window; it locks both users, then the booking (D-40 order), and publishes both reviews when the second arrives.
+`ReviewPublicationJob` publishes lone reviews after the window. Ratings travel on `OwnerBadge`, booking parties and the public profile; the catalogue
+`rating` sort is `EquipmentSpecifications.bestRatedFirst`.
 
-**Recommendations (FR-16, FR-17) in short:** `RecommendationServiceImpl` picks the point (browser location with consent,
-else the profile settlement's own coordinates (D-48), else the start city from `app.recommendations.*`), then
-queries public listings within the radius, not the viewer's own, ordered by
-`EquipmentSpecifications.nearestThenSeason` (distance, in season via `Category.isInSeason`, rating, newest; D-44).
+**Recommendations (FR-16, FR-17) in short:** `RecommendationServiceImpl` picks the point (browser location with consent, else the profile settlement's
+own coordinates (D-48), else the start city from `app.recommendations.*`), then queries public listings within the radius, not the viewer's own,
+ordered by `EquipmentSpecifications.nearestThenSeason` (distance, in season via `Category.isInSeason`, rating, newest; D-44).
 
-**Complaints and moderation (FR-20–FR-22) in short:** `ComplaintServiceImpl` files a complaint about one booking or
-listing (verified e-mail, one open per subject); `ModerationServiceImpl` (behind `AdminController`, `@PreAuthorize`
-ADMIN) decides complaints and blocks/unblocks users and listings: `User.block`, `Equipment.block/unblock`, and
-`Booking.cancelByAdmin` for every future NEW/CONFIRMED booking, then `BookingNotifier.adminCancelled` e-mails the
-other side (D-45). `AdminCatalogController` serves categories (delete moves listings), the commission rate (a new
-version per change) and statistics E1–E5 from repository queries (`StatisticsServiceImpl`, D-46).
+**Complaints and moderation (FR-20–FR-22) in short:** `ComplaintServiceImpl` files a complaint about one booking or listing (verified e-mail, one open
+per subject); `ModerationServiceImpl` (behind `AdminController`, `@PreAuthorize` ADMIN) decides complaints and blocks/unblocks users and listings:
+`User.block`, `Equipment.block/unblock`, and `Booking.cancelByAdmin` for every future NEW/CONFIRMED booking, then `BookingNotifier.adminCancelled`
+e-mails the other side (D-45). `AdminCatalogController` serves categories (delete moves listings), the commission rate (a new version per change) and
+statistics E1–E5 from repository queries (`StatisticsServiceImpl`, D-46).
+
+**Chat (D-57) in short:** one `Conversation` per user pair (smaller id first, unique); each side keeps a read marker and a notified marker (last
+message read / e-mailed about). `ChatAccess`: participants read; an active, verified USER writes to another active USER. Attachments (FILE ≤ 20 MB
+allow-list, VOICE ≤ 10 MB, VIDEO MP4/WebM ≤ 50 MB) are sniffed by leading bytes and stored in the private bucket (`PrivateFileStorage`,
+`S3_CHAT_BUCKET`, no anonymous read); `ChatAttachmentController` streams them to participants with Range support. After commit, `ChatPushListener`
+pushes the message over STOMP to `/user/queue/chat` of both users (`WebSocketConfig`: `/ws`, own origin, logged-in session, subscribe to
+`/user/queue/**` only, no SEND). `ChatNotificationJob` (every minute) e-mails a side once about messages unread for `app.chat.notify-after` (5 min);
+the next e-mail only after it has read up to there.
 
 **Where business rules live:** entity methods guard their own invariants; services orchestrate use cases.
 
-**Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`,
-Ukrainian `detail`, machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions
-carry status + code + message key (`messages_uk.properties`) + optional extra properties (e.g. conflicting days).
-Security failures are routed through `HandlerExceptionResolver` so the same advice renders them.
+**Error contract:** every error is an RFC 9457 `ProblemDetail` (`application/problem+json`) with `status`, `title`, Ukrainian `detail`,
+machine-readable `code` and, for validation, `errors: [{field, message}]`. Domain exceptions carry status + code + message key
+(`messages_uk.properties`) + optional extra properties (e.g. conflicting days). Security failures are routed through `HandlerExceptionResolver` so the
+same advice renders them.
 
-**Security model (NFR-4):** server-side HTTP session, cookie `RENTHUB_SESSION` (HttpOnly, SameSite=Lax, 7-day
-timeout); CSRF double-submit cookie `XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA pattern from the Spring
-Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity` for role checks; ownership checks
-in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
-(`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`,
-public catalogue GETs). Login is a REST endpoint: `LoginService` authenticates through `AuthenticationManager`
-(`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked / deactivated **after** the password
-(so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
-session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of
-a user (password reset, deactivation, admin block); `ConcurrentSessionFilter` answers 401 on an expired one.
-Logout is Spring Security's filter at `POST /api/v1/auth/logout` (204). Rate limits (NFR-14) are enforced in the
-services via `RateLimiter`, keyed per IP and per e-mail, stored through Spring Data Redis repositories: `RateLimitAttempts` (counter whose TTL
-starts with the first attempt and is read back on load) and `RateLimitBlock` (created when the limit is reached, TTL =
-window); see D-29.
+**Security model (NFR-4):** server-side HTTP session, cookie `RENTHUB_SESSION` (HttpOnly, SameSite=Lax, 7-day timeout); CSRF double-submit cookie
+`XSRF-TOKEN` → header `X-XSRF-TOKEN` (SPA pattern from the Spring Security reference; the token rotates on logout); BCrypt; `@EnableMethodSecurity`
+for role checks; ownership checks in services. Default rule is `anyRequest().authenticated()`; public paths are whitelisted explicitly
+(`/actuator/health`, `POST /api/v1/auth/{register,login,restore,verify-email,forgot-password,reset-password}`, public catalogue GETs). Login is a REST
+endpoint: `LoginService` authenticates through `AuthenticationManager` (`DaoAuthenticationProvider` over `AppUserDetailsService`), checks blocked /
+deactivated **after** the password (so a wrong password reveals nothing), then `SessionEstablisher` rotates the session id, stores the context in the
+session and registers the session in Spring's in-memory `SessionRegistry`. `SessionTerminator` expires all sessions of a user (password reset,
+deactivation, admin block); `ConcurrentSessionFilter` answers 401 on an expired one. Logout is Spring Security's filter at `POST /api/v1/auth/logout`
+(204). Rate limits (NFR-14) are enforced in the services via `RateLimiter`, keyed per IP and per e-mail, stored through Spring Data Redis
+repositories: `RateLimitAttempts` (counter whose TTL starts with the first attempt and is read back on load) and `RateLimitBlock` (created when the
+limit is reached, TTL = window); see D-29.
 
 **Accounts (FR-1…FR-3c) in short:** `User` owns the rules (single `USER` role that rents and rents out, D-30; account type / company fields, verify,
-deactivate, restore);
-`EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256, as the `@RedisHash` entity
-`EmailToken` in the Spring Data Redis `EmailTokenRepository` (indexed by `userId` and `type`, so a new token voids the
-old one); expiry is the entry's `@TimeToLive` (verification 24 h, reset 1 h), and keyspace events (`config.RedisConfig`)
-let Spring Data drop expired tokens from the indexes. Consumption is find-then-delete (D-28). E-mails go through application events (`VerificationEmailRequested`,
-`PasswordResetEmailRequested`) handled by `AccountMailListener` with `@Async @TransactionalEventListener`
-(after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a) presets the single administrator at start-up.
+deactivate, restore); `EmailTokenService` issues 256-bit random tokens and keeps only their SHA-256, as the `@RedisHash` entity `EmailToken` in the
+Spring Data Redis `EmailTokenRepository` (indexed by `userId` and `type`, so a new token voids the old one); expiry is the entry's `@TimeToLive`
+(verification 24 h, reset 1 h), and keyspace events (`config.RedisConfig`) let Spring Data drop expired tokens from the indexes. Consumption is
+find-then-delete (D-28). E-mails go through application events (`VerificationEmailRequested`, `PasswordResetEmailRequested`) handled by
+`AccountMailListener` with `@Async @TransactionalEventListener` (after commit, off the request thread, failures logged). `AdminAccountConfig` (FR-2a)
+presets the single administrator at start-up.
 
-**Configuration:** a single `application.yml`, no Spring profiles (D-17): PostgreSQL from docker-compose
-unless `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` say otherwise (D-47, D-54), SMTP relay; secrets and external services only via `${ENV}`
-variables or the root `.env` (git-ignored, imported by `spring.config.import` and read by Compose; D-55).
+**Configuration:** a single `application.yml`, no Spring profiles (D-17): PostgreSQL from docker-compose unless `DB_URL` / `DB_USERNAME` /
+`DB_PASSWORD` say otherwise (D-47, D-54), SMTP relay; secrets and external services only via `${ENV}` variables or the root `.env` (git-ignored,
+imported by `spring.config.import` and read by Compose; D-55).
 
-**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written for PostgreSQL; Hibernate only validates (`ddl-auto=validate`). Timestamps are
-`TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.
+**Persistence:** Flyway `V{n}__{snake_case}.sql` in `src/main/resources/db/migration`, written for PostgreSQL; Hibernate only validates
+(`ddl-auto=validate`). Timestamps are `TIMESTAMP WITH TIME ZONE` ↔ `Instant`; money `NUMERIC(…, 2)` ↔ `BigDecimal`; dates `DATE` ↔ `LocalDate`.
 
 **Time:** always via the injected `java.time.Clock` (Europe/Kyiv). JVM default locale is set to `uk`.
 
-**Scheduled jobs:** `BookingLifecycleJobs` (cron, Europe/Kyiv): daily 00:05 completes CONFIRMED bookings with
-`dateTo < today` (FR-15), hourly expires NEW requests older than 48 h or whose first day arrived (FR-15b). Both go
-through `Booking`'s methods; completion also sends the FR-18 review reminder. `ReviewPublicationJob` (hourly at :15)
-publishes reviews whose window has ended.
+**Scheduled jobs** (+ `ChatNotificationJob`, above): `BookingLifecycleJobs` (cron, Europe/Kyiv): daily 00:05 completes CONFIRMED bookings with `dateTo
+< today` (FR-15), hourly expires NEW requests older than 48 h or whose first day arrived (FR-15b). Both go through `Booking`'s methods; completion
+also sends the FR-18 review reminder. `ReviewPublicationJob` (hourly at :15) publishes reviews whose window has ended.
 
-**Integrations** (one small application-owned interface each, configured only through `${ENV}`):
-e-mail via `MailGateway` (SMTP, `SMTP_*`); photos via `ObjectStorage` (`S3ObjectStorage`, AWS SDK v2 against any
-S3-compatible service; SeaweedFS locally, `S3_*`, public-read bucket); geocoding via `Geocoder` (`NominatimGeocoder`:
-structured street + settlement + region search for listing pins and postal codes, and reverse lookup of the street
-under a moved pin (`GET /geocode/reverse`, D-49), identifying User-Agent, ≤ 1 request/s shared, cached in Redis; regions and settlements come from our own tables, never from Nominatim, D-48).
+**Integrations** (one small application-owned interface each, configured only through `${ENV}`): e-mail via `MailGateway` (SMTP, `SMTP_*`); photos via
+`ObjectStorage` (`S3ObjectStorage`, AWS SDK v2 against any S3-compatible service; SeaweedFS locally, `S3_*`, public-read bucket), chat files via
+`PrivateFileStorage` (private bucket); geocoding via `Geocoder` (`NominatimGeocoder`: structured street + settlement + region search for listing pins
+and postal codes, and reverse lookup of the street under a moved pin (`GET /geocode/reverse`, D-49), identifying User-Agent, ≤ 1 request/s shared,
+cached in Redis; regions and settlements come from our own tables, never from Nominatim, D-48).
 
 ## 3. Frontend
 
-**Stack:** React 19, TypeScript strict, Vite 8, React Router 8 (data router), TanStack Query 5, React Hook Form +
-Zod, Tailwind CSS 4, Leaflet 1.9 used directly (no react-leaflet, D-34; OpenStreetMap tiles). ESLint: `max-lines: 150`.
-**Themes (D-50):** dark palette in `index.css` (`data-theme`); `public/theme.js` + `useTheme` + header `ThemeToggle`.
+**Stack:** React 19, TypeScript strict, Vite 8, React Router 8 (data router), TanStack Query 5, React Hook Form + Zod, Tailwind CSS 4, Leaflet 1.9
+used directly (no react-leaflet, D-34; OpenStreetMap tiles). ESLint: `max-lines: 150`. **Themes (D-50):** dark palette in `index.css` (`data-theme`);
+`public/theme.js` + `useTheme` + header `ThemeToggle`.
 
 ```
 src/
@@ -171,20 +168,22 @@ src/
 └─ features/recommendations/ types.ts · api · hooks/useRecommendations · components/ (Recommendations on the home
                      page, RecommendationCard with the «Сезон» badge, LocationControl)
 └─ features/complaints/ ComplaintButton + ComplaintDialog (on the equipment card and in booking rows)
+└─ features/chat/  types · format · api/chatApi · hooks/{useChatQueries (cache helper), useChatMutations, useChatSocket
+                     (@stomp/stompjs), useVoiceRecorder (MediaRecorder)} · components/ (ConversationList, ChatThread,
+                     MessageList, MessageBubble, AttachmentView, MessageComposer, VoiceRecorder, ChatButton, ChatUnreadBadge,
+                     ChatSocketBridge in AppLayout); pages/MessagesPage at /messages/:id?
 └─ features/admin/ api · hooks/useAdmin · components/ (AdminComplaints + ComplaintRow, AdminUsers, AdminEquipment,
                      AdminList, AdminSearch, BlockToggle, AdminCategories, AdminCommission, AdminStatistics);
                      pages/AdminPage with tabs at /admin/:tab (ADMIN only)
 ```
 
-Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via
-TanStack Query hooks (`useXxx`); every request renders loading / empty / error states (NFR-6); errors show the
-backend's Ukrainian `detail` via `problemMessage()`. Auth state is the `['auth','me']` query (null for guests; a 401
-is not an error); login/register/restore set it, logout and deactivation clear the whole cache. `RequireAuth` guards
-routes (redirects guests to `/login` and back). Forms: react-hook-form + Zod schemas with Ukrainian messages, backend
-violations applied with `applyServerErrors`.
+Conventions: path alias `@/` → `src/`; API calls only through `src/api` or `features/*/api`; server state via TanStack Query hooks (`useXxx`); every
+request renders loading / empty / error states (NFR-6); errors show the backend's Ukrainian `detail` via `problemMessage()`. Auth state is the
+`['auth','me']` query (null for guests; a 401 is not an error); login/register/restore set it, logout and deactivation clear the whole cache.
+`RequireAuth` guards routes (redirects guests to `/login` and back). Forms: react-hook-form + Zod schemas with Ukrainian messages, backend violations
+applied with `applyServerErrors`.
 
-Vite on :5173 proxies `/api` and `/actuator` to Spring Boot on :8080 (same origin, so session + CSRF cookies
-work without CORS).
+Vite on :5173 proxies `/api` and `/actuator` to Spring Boot on :8080 (same origin, so session + CSRF cookies work without CORS).
 
 ## 4. Patterns in use (one line each)
 
@@ -197,3 +196,4 @@ work without CORS).
 - **Observer** (storage clean-up) — transactional events delete stored files only after the database outcome is known.
 - **Enum-driven state machine** (booking lifecycle) — `BookingStatus.next()` is the single FR-14 transition table.
 - **Pessimistic lock + re-check** (overbooking) — the listing row lock serialises create/confirm on every database.
+- **Observer + push** (chat) — a committed message is pushed over STOMP; services never talk to sockets directly.
